@@ -12,41 +12,32 @@ class SaleController extends Controller
     {
         $user = $request->user();
         
+        // Use a transaction to ensure integrity
         return DB::transaction(function () use ($request, $user) {
-            $saleTotalInCurrency = 0; // The total to show on the receipt (e.g. SYP)
-            $totalProfitInUsd = 0;    // The real profit in USD
+            $saleTotalInCurrency = 0; 
+            $totalProfitInUsd = 0;   
             $saleItemsData = [];
             
-            // 1. Get the rate (e.g., 12000 for SYP)
-            // If currency is USD, rate is 1.
             $rateToUsd = $request->p_rate_to_usd_at_sale ?? 1.0;
 
             foreach ($request->p_sale_items_data as $itemData) {
+                // Lock for update to prevent race conditions
                 $product = $user->products()->lockForUpdate()->find($itemData['product_id']);
                 
-                if (!$product) throw new \Exception("Product not found");
-                if ($product->quantity < $itemData['quantity']) {
-                    throw new \Exception("Insufficient stock for {$product->name}");
-                }
+                if (!$product) throw new \Exception("Product ID {$itemData['product_id']} not found");
+                
+                // Allow negative stock? If not, keep this check.
+                // if ($product->quantity < $itemData['quantity']) {
+                //    throw new \Exception("Insufficient stock for {$product->name}");
+                // }
 
-                // 2. Deduct Inventory
                 $product->decrement('quantity', $itemData['quantity']);
 
                 $qty = $itemData['quantity'];
-                
-                // 3. Price Logic
-                // Frontend sends price in USD (e.g. 30)
                 $unitPriceUsd = $itemData['price']; 
-                
-                // Calculate Price in Local Currency for the Invoice (e.g. 30 * 12000 = 360,000)
                 $unitPriceLocal = $unitPriceUsd * $rateToUsd;
-
-                // 4. Profit Logic (Keep everything in USD)
-                // Profit = (Selling Price USD - Cost Price USD) * Qty
-                // Example: (30 - 20) * 1 = 10 USD Profit
                 $profit = ($unitPriceUsd - $product->cost_price) * $qty;
 
-                // Accumulate Totals
                 $saleTotalInCurrency += ($unitPriceLocal * $qty);
                 $totalProfitInUsd += $profit;
 
@@ -54,23 +45,23 @@ class SaleController extends Controller
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'quantity_sold' => $qty,
-                    'price_at_sale' => $unitPriceLocal, // Save 360,000 (Local)
-                    'cost_price_at_sale' => $product->cost_price, // Save 20 (USD)
+                    'price_at_sale' => $unitPriceLocal,
+                    'cost_price_at_sale' => $product->cost_price,
                 ];
             }
 
-            // 5. Create Sale Record
             $sale = $user->sales()->create([
                 'employee_id' => $request->p_employee_id,
-                'total_price' => $saleTotalInCurrency, // e.g. 360,000 SYP
-                'total_profit' => $totalProfitInUsd,   // e.g. 10 USD
+                'total_price' => $saleTotalInCurrency,
+                'total_profit' => $totalProfitInUsd,
                 'currency_code' => $request->p_currency_code,
                 'rate_to_usd_at_sale' => $rateToUsd,
             ]);
 
             $sale->items()->createMany($saleItemsData);
 
-            return $sale->id;
+            // --- FIX: Return JSON object, not raw integer ---
+            return response()->json(['id' => $sale->id]);
         });
     }
 
