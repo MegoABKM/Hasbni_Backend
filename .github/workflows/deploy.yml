@@ -8,29 +8,21 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Debug secret
-        env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-        run: |
-          echo "Secret length: $(echo \"$DEPLOY_KEY\" | wc -c) characters"
-          echo "$DEPLOY_KEY" | head -n 2
-
+        
       - name: Setup SSH
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null || { echo "❌ Invalid key"; exit 1; }
           ssh-keyscan -p 2200 38.242.218.74 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-
-      - name: Test SSH
+          
+      - name: Test Connection
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "echo '✅ Connected!'"
+          ssh -o StrictHostKeyChecking=no -p 2200 root@38.242.218.74 "echo '✅ Connected!'"
