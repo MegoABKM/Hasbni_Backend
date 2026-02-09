@@ -19,7 +19,7 @@ jobs:
         run: |
           echo "Secret length: ${#DEPLOY_KEY} characters"
           echo "$DEPLOY_KEY" | head -n 3
-          
+
       - name: Setup SSH (Robust)
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -41,7 +41,7 @@ jobs:
           ssh-keyscan -p 2200 38.242.218.74 2>/dev/null >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
           echo "✓ Host key added"
-          
+
       - name: Test SSH connection
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "echo '✅ Connected!'"
