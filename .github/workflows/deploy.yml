@@ -10,9 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
+      - uses: actions/checkout@v4
+
       - name: Setup SSH
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -22,7 +21,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p 2200 38.242.218.74 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-          
-      - name: Test Connection
+
+      - name: Deploy
         run: |
-          ssh -o StrictHostKeyChecking=no -p 2200 root@38.242.218.74 "echo '✅ Connected!'"
+          ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "echo '✅ SUCCESS'"
