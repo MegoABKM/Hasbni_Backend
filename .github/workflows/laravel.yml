@@ -56,7 +56,7 @@ jobs:
       - name: Deploy Laravel App
         run: |
           ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "
-            cd /www/wwwroot/my-laravel-app || mkdir -p /www/wwwroot/my-laravel-app && cd /www/wwwroot/my-laravel-app
+            cd /www/wwwroot/clovercompany/bhasbni || mkdir -p /www/wwwroot/clovercompany/bhasbni && cd /www/wwwroot/clovercompany/bhasbni
             git pull origin main
             
             # Install PHP dependencies
