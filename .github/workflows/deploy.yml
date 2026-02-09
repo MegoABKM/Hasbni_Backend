@@ -1,30 +1,33 @@
-name: Deploy to Server
+name: 🔍 Test GitHub Actions SSH
 
 on:
-  push:
-    branches: [main]  # Change to your branch name
+  workflow_dispatch:  # Manual trigger only (no auto-run on push)
 
 jobs:
-  deploy:
+  test-ssh:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup SSH
+      - name: Setup SSH Key from Secret
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          # IMPORTANT: Preserve newlines in secret
+          echo "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan 38.242.218.74 >> ~/.ssh/known_hosts
+          ls -la ~/.ssh/
+          echo "✓ Key installed (size: $(wc -c < ~/.ssh/id_rsa) bytes)"
+          
+      - name: Scan Host Key (Port 2200)
+        run: |
+          ssh-keyscan -p 2200 38.242.218.74 2>&1 || true
+          ssh-keyscan -p 2200 38.242.218.74 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
           
-      - name: Deploy to server
+      - name: 🔥 VERBOSE SSH TEST (Shows exact auth failure)
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
-          ssh root@38.242.218.74 "
-            cd /path/to/your/project || mkdir -p /path/to/your/project
-            git pull origin main
-            # Add any other deployment commands here
-            systemctl restart your-service
-          "
+          echo "=== Attempting SSH connection to port 2200 ==="
+          ssh -vvv -o StrictHostKeyChecking=no -o ConnectTimeout=15 -p 2200 root@38.242.218.74 "echo '✓ SUCCESS: Authenticated!'" 2>&1 || echo "✗ FAILED: Check logs above for 'Permission denied' or 'Server refused our key'"
