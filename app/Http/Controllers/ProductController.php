@@ -24,12 +24,34 @@ class ProductController extends Controller
     }
 
     public function store(Request $request) {
-        return $request->user()->products()->create($request->all());
+        // 1. Validate Data (Prevents 500 Errors)
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'barcode' => 'nullable|string', // Allows null barcodes
+            'quantity' => 'required|integer',
+            'cost_price' => 'required|numeric',
+            'selling_price' => 'required|numeric',
+        ]);
+
+        // 2. Create Product safely
+        return $request->user()->products()->create($validated);
     }
 
     public function update(Request $request, $id) {
+        // 1. Find Product belonging to user
         $product = $request->user()->products()->findOrFail($id);
-        $product->update($request->all());
+
+        // 2. Validate Data
+        $validated = $request->validate([
+            'name' => 'sometimes|string',
+            'barcode' => 'nullable|string',
+            'quantity' => 'sometimes|integer',
+            'cost_price' => 'sometimes|numeric',
+            'selling_price' => 'sometimes|numeric',
+        ]);
+
+        // 3. Update
+        $product->update($validated);
         return $product;
     }
 
