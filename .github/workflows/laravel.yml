@@ -55,21 +55,21 @@ jobs:
 
       - name: Deploy Laravel App
         run: |
-          ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "
-            cd /www/wwwroot/clovercompany/bhasbni || mkdir -p /www/wwwroot/clovercompany/bhasbni && cd /www/wwwroot/clovercompany/bhasbni
-            git pull origin main
-            
-            # Install PHP dependencies
-            composer install --no-dev --optimize-autoloader
-            
-            # Laravel optimizations
-            php artisan config:clear
-            php artisan cache:clear
-            php artisan route:clear
-            php artisan view:clear
-            
-            # Set proper permissions
-            chown -R www-data:www-data storage bootstrap/cache
-            
-            echo '✅ Laravel deployed successfully at $(date)'
-          "
+         ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "
+          cd /www/wwwroot/bhasbni || mkdir -p /www/wwwroot/bhasbni && cd /www/wwwroot/bhasbni
+          git pull origin main
+      
+          # Install PHP dependencies
+          composer install --no-dev --optimize-autoloader
+      
+          # Laravel optimizations
+          php artisan config:clear
+          php artisan cache:clear
+          php artisan route:clear
+          php artisan view:clear
+      
+          # Set proper permissions
+          chown -R www-data:www-data storage bootstrap/cache
+      
+          echo '✅ bhasbni deployed successfully at $(date)'
+         "
