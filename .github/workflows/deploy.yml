@@ -1,4 +1,4 @@
-name: Deploy to Server (Fixed)
+name: Deploy to Server
 
 on:
   workflow_dispatch:
@@ -8,40 +8,29 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
-      - name: Debug: Show secret length
+
+      - name: Debug secret
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
-          echo "Secret length: ${#DEPLOY_KEY} characters"
-          echo "$DEPLOY_KEY" | head -n 3
+          echo "Secret length: $(echo \"$DEPLOY_KEY\" | wc -c) characters"
+          echo "$DEPLOY_KEY" | head -n 2
 
-      - name: Setup SSH (Robust)
+      - name: Setup SSH
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
-          # Clean key: remove CR, ensure proper format
           echo "$DEPLOY_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # Verify key is readable
-          if ! ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null 2>&1; then
-            echo "❌ Invalid private key format!"
-            cat ~/.ssh/id_rsa
-            exit 1
-          fi
-          echo "✓ Private key validated"
-          
-          # Add server host key
-          ssh-keyscan -p 2200 38.242.218.74 2>/dev/null >> ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null || { echo "❌ Invalid key"; exit 1; }
+          ssh-keyscan -p 2200 38.242.218.74 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
-          echo "✓ Host key added"
 
-      - name: Test SSH connection
+      - name: Test SSH
         run: |
           ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "echo '✅ Connected!'"
