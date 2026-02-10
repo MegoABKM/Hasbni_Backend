@@ -3,18 +3,16 @@ name: Laravel CI/CD
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-  # ====== JOB 1: Run Tests (keeps your existing setup) ======
+  # Job 1: Test the code
   laravel-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: shivammathur/setup-php@15c43e89cdef867065b0213be354c2841860869e
-        with:
-          php-version: '8.0'
       - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2' # Ensure this matches your server PHP version
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
       - name: Install Dependencies
@@ -33,17 +31,17 @@ jobs:
           DB_DATABASE: database/database.sqlite
         run: php artisan test
 
-  # ====== JOB 2: Deploy to Server (NEW!) ======
+  # Job 2: Deploy to Server
   deploy:
-    needs: laravel-tests  # Only deploy if tests pass
+    needs: laravel-tests
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'  # Only deploy on main branch pushes
+    if: github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH for deployment
+      - name: Setup SSH
         env:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
@@ -53,23 +51,46 @@ jobs:
           ssh-keyscan -p 2200 38.242.218.74 >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Deploy Laravel App
+      - name: Deploy to aaPanel
         run: |
          ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@38.242.218.74 "
-          cd /www/wwwroot/bhasbni || mkdir -p /www/wwwroot/bhasbni && cd /www/wwwroot/bhasbni
-          git pull origin main
+          # 1. Create directory hierarchy if it doesn't exist
+          mkdir -p /www/wwwroot/clovercompany/bhasbni
+          
+          # 2. Go to the folder
+          cd /www/wwwroot/clovercompany/bhasbni
+          
+          # 3. Git Logic: Clone if new, Pull if exists
+          if [ ! -d .git ]; then
+             echo '📂 Folder is empty, cloning repo...'
+             git clone git@github.com:MegoABKM/Hasbni_Backend.git .
+          else
+             echo '🔄 Pulling latest changes...'
+             git pull origin main
+          fi
       
-          # Install PHP dependencies
+          # 4. Install PHP dependencies
+          export COMPOSER_ALLOW_SUPERUSER=1
           composer install --no-dev --optimize-autoloader
       
-          # Laravel optimizations
+          # 5. Handle .env file
+          if [ ! -f .env ]; then
+             cp .env.example .env
+             php artisan key:generate
+          fi
+
+          # 6. Laravel commands
+          php artisan migrate --force
           php artisan config:clear
           php artisan cache:clear
           php artisan route:clear
           php artisan view:clear
       
-          # Set proper permissions
-          chown -R www-data:www-data storage bootstrap/cache
+          # 7. IMPORTANT: Fix Permissions for aaPanel (User is 'www')
+          chown -R www:www /www/wwwroot/clovercompany/bhasbni
+          chmod -R 755 /www/wwwroot/clovercompany/bhasbni
+          chmod -R 775 /www/wwwroot/clovercompany/bhasbni/storage
+          chmod -R 775 /www/wwwroot/clovercompany/bhasbni/bootstrap/cache
       
-          echo '✅ bhasbni deployed successfully at $(date)'
+          echo '✅ Deployed successfully at \$(date)'
          "
