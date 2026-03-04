@@ -54,17 +54,20 @@ jobs:
       - name: Deploy to aaPanel
         run: |
          ssh -o StrictHostKeyChecking=no -p 22 -i ~/.ssh/id_rsa root@212.47.68.230 "
-          # IMPORTANT: 'set -e' stops the script instantly if a command fails
           set -e 
           
           mkdir -p /www/wwwroot/clovercompany/bhasbni
           cd /www/wwwroot/clovercompany/bhasbni
           
           echo '🔄 Forcing Git to download latest files...'
+          
+          # 🚨 FIX: Tell Git to ignore the root/www ownership difference
+          git config --global --add safe.directory /www/wwwroot/clovercompany/bhasbni
+          
           git init
           git remote remove origin 2>/dev/null || true
           
-          # 🚨 FIX: Using GitHub Token so the server is allowed to read your Private Repo
+          # Add the GitHub token to authenticate
           git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/MegoABKM/Hasbni_Backend.git
           
           # Download the files
@@ -95,4 +98,4 @@ jobs:
           chmod -R 775 /www/wwwroot/clovercompany/bhasbni/bootstrap/cache
       
           echo '✅ Deployed successfully!'
-          "
+         "
