@@ -46,14 +46,14 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
+          # Write the secret to the file safely
           echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p 2200 212.47.68.230 >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+          # Removed ssh-keyscan because StrictHostKeyChecking=no handles it!
 
       - name: Deploy to aaPanel
         run: |
-         ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@212.47.68.230 "
+         ssh -o StrictHostKeyChecking=no -p 22 -i ~/.ssh/id_rsa root@212.47.68.230 "
           # 1. Create directory hierarchy if it doesn't exist
           mkdir -p /www/wwwroot/clovercompany/bhasbni
           
