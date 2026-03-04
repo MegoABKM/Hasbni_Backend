@@ -53,7 +53,7 @@ jobs:
 
       - name: Deploy to aaPanel
         run: |
-         ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@212.47.68.230 "
+         ssh -o StrictHostKeyChecking=no -p 22 -i ~/.ssh/id_rsa root@212.47.68.230 "
           # IMPORTANT: 'set -e' stops the script instantly if a command fails
           set -e 
           
