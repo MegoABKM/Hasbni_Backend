@@ -53,21 +53,21 @@ jobs:
 
       - name: Deploy to aaPanel
         run: |
-         ssh -o StrictHostKeyChecking=no -p 22 -i ~/.ssh/id_rsa root@212.47.68.230 "
+         ssh -o StrictHostKeyChecking=no -p 2200 -i ~/.ssh/id_rsa root@212.47.68.230 "
+          # IMPORTANT: 'set -e' stops the script instantly if a command fails
+          set -e 
+          
           mkdir -p /www/wwwroot/clovercompany/bhasbni
           cd /www/wwwroot/clovercompany/bhasbni
           
           echo '🔄 Forcing Git to download latest files...'
-          # 1. Initialize git and force it to overwrite whatever is in the aaPanel folder
           git init
           git remote remove origin 2>/dev/null || true
           
-          # IF YOUR REPO IS PUBLIC, use this line:
-          git remote add origin https://github.com/MegoABKM/Hasbni_Backend.git
+          # 🚨 FIX: Using GitHub Token so the server is allowed to read your Private Repo
+          git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/MegoABKM/Hasbni_Backend.git
           
-          # IF YOUR REPO IS PRIVATE, use this line instead (You need a Personal Access Token):
-          # git remote add origin https://\${{ secrets.GITHUB_TOKEN }}@github.com/MegoABKM/Hasbni_Backend.git
-          
+          # Download the files
           git fetch origin
           git reset --hard origin/main
           
