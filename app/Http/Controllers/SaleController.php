@@ -8,11 +8,10 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
-    public function store(Request $request)
+      public function store(Request $request)
     {
         $user = $request->user();
         
-        // Use a transaction to ensure integrity
         return DB::transaction(function () use ($request, $user) {
             $saleTotalInCurrency = 0; 
             $totalProfitInUsd = 0;   
@@ -24,12 +23,16 @@ class SaleController extends Controller
                 // Lock for update to prevent race conditions
                 $product = $user->products()->lockForUpdate()->find($itemData['product_id']);
                 
-                if (!$product) throw new \Exception("Product ID {$itemData['product_id']} not found");
+                if (!$product) {
+                    throw new \Exception("Product ID {$itemData['product_id']} not found");
+                }
                 
-                // Allow negative stock? If not, keep this check.
-                // if ($product->quantity < $itemData['quantity']) {
-                //    throw new \Exception("Insufficient stock for {$product->name}");
-                // }
+                // FIX: Validate stock availability after lock
+                if ($product->quantity < $itemData['quantity']) {
+                    throw new \Exception(
+                        "Insufficient stock for {$product->name}. Available: {$product->quantity}, Requested: {$itemData['quantity']}"
+                    );
+                }
 
                 $product->decrement('quantity', $itemData['quantity']);
 
@@ -59,11 +62,10 @@ class SaleController extends Controller
             ]);
 
             $sale->items()->createMany($saleItemsData);
-
-            // --- FIX: Return JSON object, not raw integer ---
             return response()->json(['id' => $sale->id]);
         });
     }
+
 
     public function index(Request $request) {
         return $request->user()->sales()
