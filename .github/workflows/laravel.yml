@@ -54,43 +54,45 @@ jobs:
       - name: Deploy to aaPanel
         run: |
          ssh -o StrictHostKeyChecking=no -p 22 -i ~/.ssh/id_rsa root@212.47.68.230 "
-          # 1. Create directory hierarchy if it doesn't exist
           mkdir -p /www/wwwroot/clovercompany/bhasbni
-          
-          # 2. Go to the folder
           cd /www/wwwroot/clovercompany/bhasbni
           
-          # 3. Git Logic: Clone if new, Pull if exists
-          if [ ! -d .git ]; then
-             echo '📂 Folder is empty, cloning repo...'
-             git clone git@github.com:MegoABKM/Hasbni_Backend.git .
-          else
-             echo '🔄 Pulling latest changes...'
-             git pull origin main
-          fi
-      
-          # 4. Install PHP dependencies
+          echo '🔄 Forcing Git to download latest files...'
+          # 1. Initialize git and force it to overwrite whatever is in the aaPanel folder
+          git init
+          git remote remove origin 2>/dev/null || true
+          
+          # IF YOUR REPO IS PUBLIC, use this line:
+          git remote add origin https://github.com/MegoABKM/Hasbni_Backend.git
+          
+          # IF YOUR REPO IS PRIVATE, use this line instead (You need a Personal Access Token):
+          # git remote add origin https://\${{ secrets.GITHUB_TOKEN }}@github.com/MegoABKM/Hasbni_Backend.git
+          
+          git fetch origin
+          git reset --hard origin/main
+          
+          echo '📦 Installing Composer...'
           export COMPOSER_ALLOW_SUPERUSER=1
           composer install --no-dev --optimize-autoloader
       
-          # 5. Handle .env file
           if [ ! -f .env ]; then
+             echo '⚙️ Setting up .env...'
              cp .env.example .env
              php artisan key:generate
           fi
 
-          # 6. Laravel commands
+          echo '🗄️ Running Laravel commands...'
           php artisan migrate --force
           php artisan config:clear
           php artisan cache:clear
           php artisan route:clear
           php artisan view:clear
       
-          # 7. IMPORTANT: Fix Permissions for aaPanel (User is 'www')
+          echo '🔒 Fixing Permissions for aaPanel...'
           chown -R www:www /www/wwwroot/clovercompany/bhasbni
           chmod -R 755 /www/wwwroot/clovercompany/bhasbni
           chmod -R 775 /www/wwwroot/clovercompany/bhasbni/storage
           chmod -R 775 /www/wwwroot/clovercompany/bhasbni/bootstrap/cache
       
-          echo '✅ Deployed successfully at \$(date)'
+          echo '✅ Deployed successfully!'
          "
