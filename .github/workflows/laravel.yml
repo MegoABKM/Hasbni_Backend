@@ -76,7 +76,7 @@ jobs:
           
           echo '📦 Installing Composer...'
           export COMPOSER_ALLOW_SUPERUSER=1
-          composer install --no-dev --optimize-autoloader
+          composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-fileinfo
       
           if [ ! -f .env ]; then
              echo '⚙️ Setting up .env...'
