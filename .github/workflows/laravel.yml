@@ -72,21 +72,21 @@ jobs:
           echo '📦 Installing Composer...'
           export COMPOSER_ALLOW_SUPERUSER=1
           
-          # Using specific PHP version 8.2 (Change '82' to '83' if you are using PHP 8.3)
-          /www/server/php/82/bin/php /usr/bin/composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-fileinfo
+          # Using PHP 8.3 path
+          /www/server/php/83/bin/php /usr/bin/composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-fileinfo
       
           if [ ! -f .env ]; then
              echo '⚙️ Setting up .env...'
              cp .env.example .env
-             /www/server/php/82/bin/php artisan key:generate
+             /www/server/php/83/bin/php artisan key:generate
           fi
 
           echo '🗄️ Running Laravel commands...'
-          /www/server/php/82/bin/php artisan migrate --force
-          /www/server/php/82/bin/php artisan config:clear
-          /www/server/php/82/bin/php artisan cache:clear
-          /www/server/php/82/bin/php artisan route:clear
-          /www/server/php/82/bin/php artisan view:clear
+          /www/server/php/83/bin/php artisan migrate --force
+          /www/server/php/83/bin/php artisan config:clear
+          /www/server/php/83/bin/php artisan cache:clear
+          /www/server/php/83/bin/php artisan route:clear
+          /www/server/php/83/bin/php artisan view:clear
       
           echo '🔒 Fixing Permissions for aaPanel...'
           chown -R www:www /www/wwwroot/clovercompany/bhasbni
