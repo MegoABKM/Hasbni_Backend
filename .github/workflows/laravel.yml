@@ -60,36 +60,33 @@ jobs:
           cd /www/wwwroot/clovercompany/bhasbni
           
           echo '🔄 Forcing Git to download latest files...'
-          
-          # 🚨 FIX: Tell Git to ignore the root/www ownership difference
           git config --global --add safe.directory /www/wwwroot/clovercompany/bhasbni
           
           git init
           git remote remove origin 2>/dev/null || true
-          
-          # Add the GitHub token to authenticate
           git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/MegoABKM/Hasbni_Backend.git
           
-          # Download the files
           git fetch origin
           git reset --hard origin/main
           
           echo '📦 Installing Composer...'
           export COMPOSER_ALLOW_SUPERUSER=1
-          composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-fileinfo
+          
+          # Using specific PHP version 8.2 (Change '82' to '83' if you are using PHP 8.3)
+          /www/server/php/82/bin/php /usr/bin/composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-fileinfo
       
           if [ ! -f .env ]; then
              echo '⚙️ Setting up .env...'
              cp .env.example .env
-             php artisan key:generate
+             /www/server/php/82/bin/php artisan key:generate
           fi
 
           echo '🗄️ Running Laravel commands...'
-          php artisan migrate --force
-          php artisan config:clear
-          php artisan cache:clear
-          php artisan route:clear
-          php artisan view:clear
+          /www/server/php/82/bin/php artisan migrate --force
+          /www/server/php/82/bin/php artisan config:clear
+          /www/server/php/82/bin/php artisan cache:clear
+          /www/server/php/82/bin/php artisan route:clear
+          /www/server/php/82/bin/php artisan view:clear
       
           echo '🔒 Fixing Permissions for aaPanel...'
           chown -R www:www /www/wwwroot/clovercompany/bhasbni
