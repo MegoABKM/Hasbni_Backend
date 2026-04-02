@@ -15,20 +15,13 @@ class ReportsController extends Controller
         $start = Carbon::parse($request->start_date);
         $end = Carbon::parse($request->end_date);
 
-        // 1. Revenue (Sales)
-        // FIX: We must DIVIDE the stored local price by the rate to get back to USD.
-        $sales = Sale::where('user_id', $user->id)
-            ->whereBetween('created_at', [$start, $end])
-            ->get();
-            
-        $totalRevenueUsd = $sales->sum(function($sale) {
-            $rate = $sale->rate_to_usd_at_sale > 0 ? $sale->rate_to_usd_at_sale : 1;
-            return $sale->total_price / $rate;
-        });
+      // Replace the entire $sales fetching logic with:
+$salesQuery = Sale::where('user_id', $user->id)
+    ->whereBetween('created_at', [$start, $end]);
 
-        // 2. Profit is already stored in USD in the database
-        $totalProfitUsd = $sales->sum('total_profit');
-
+// Let the database do the math
+$totalRevenueUsd = $salesQuery->sum(DB::raw('total_price / CASE WHEN rate_to_usd_at_sale > 0 THEN rate_to_usd_at_sale ELSE 1 END'));
+$totalProfitUsd = $salesQuery->sum('total_profit');
         // 3. Expenses (stored as USD 'amount' in DB)
         $totalExpensesUsd = Expense::where('user_id', $user->id)
             ->whereBetween('expense_date', [$start, $end])

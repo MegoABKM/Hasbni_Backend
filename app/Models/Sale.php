@@ -8,4 +8,9 @@ class Sale extends Model {
     public function items() {
         return $this->hasMany(SaleItem::class);
     }
+
+    // 👈 أضف هذه العلاقة
+    public function customer() {
+        return $this->belongsTo(Customer::class);
+    }
 }

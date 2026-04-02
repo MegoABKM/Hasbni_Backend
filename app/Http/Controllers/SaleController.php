@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
-      public function store(Request $request)
+  public function store(Request $request)
     {
         $user = $request->user();
         
@@ -20,19 +20,9 @@ class SaleController extends Controller
             $rateToUsd = $request->p_rate_to_usd_at_sale ?? 1.0;
 
             foreach ($request->p_sale_items_data as $itemData) {
-                // Lock for update to prevent race conditions
                 $product = $user->products()->lockForUpdate()->find($itemData['product_id']);
-                
-                if (!$product) {
-                    throw new \Exception("Product ID {$itemData['product_id']} not found");
-                }
-                
-                // FIX: Validate stock availability after lock
-                if ($product->quantity < $itemData['quantity']) {
-                    throw new \Exception(
-                        "Insufficient stock for {$product->name}. Available: {$product->quantity}, Requested: {$itemData['quantity']}"
-                    );
-                }
+                if (!$product) throw new \Exception("Product not found");
+                if ($product->quantity < $itemData['quantity']) throw new \Exception("Insufficient stock");
 
                 $product->decrement('quantity', $itemData['quantity']);
 
@@ -53,15 +43,45 @@ class SaleController extends Controller
                 ];
             }
 
+            // --- حسابات الخصم والضريبة والدين ---
+            $discount = $request->p_discount_amount ?? 0;
+            $taxPercentage = $request->p_tax_percentage ?? 0;
+            
+            $finalTotalLocal = $saleTotalInCurrency - $discount;
+            $taxAmount = $finalTotalLocal * ($taxPercentage / 100);
+            $finalTotalLocal += $taxAmount;
+
+            $paidAmount = $request->p_paid_amount ?? $finalTotalLocal;
+            
+            $paymentStatus = 'paid';
+            if ($paidAmount == 0) {
+                $paymentStatus = 'unpaid';
+            } elseif ($paidAmount < $finalTotalLocal) {
+                $paymentStatus = 'partial';
+            }
+
+            // إنشاء الفاتورة
             $sale = $user->sales()->create([
                 'employee_id' => $request->p_employee_id,
-                'total_price' => $saleTotalInCurrency,
-                'total_profit' => $totalProfitInUsd,
+                'customer_id' => $request->p_customer_id, // 👈 العميل
+                'total_price' => $finalTotalLocal,
+                'total_profit' => $totalProfitInUsd - ($discount / $rateToUsd), // تقليل الربح بقيمة الخصم بالدولار
                 'currency_code' => $request->p_currency_code,
                 'rate_to_usd_at_sale' => $rateToUsd,
+                'discount_amount' => $discount,
+                'tax_amount' => $taxAmount,
+                'paid_amount' => $paidAmount,
+                'payment_status' => $paymentStatus,
             ]);
 
             $sale->items()->createMany($saleItemsData);
+
+            // 👈 تسجيل الدين على العميل إذا لم يدفع المبلغ كاملاً
+            if ($request->p_customer_id && $paidAmount < $finalTotalLocal) {
+                $debt = $finalTotalLocal - $paidAmount;
+                $user->customers()->where('id', $request->p_customer_id)->increment('balance', $debt);
+            }
+
             return response()->json(['id' => $sale->id]);
         });
     }
@@ -105,22 +125,34 @@ class SaleController extends Controller
 
             $sale = $saleItem->sale;
             
-            // Refund Amount is in Local Currency (e.g. 360,000)
+            // Refund Amount is in Local Currency
             $refundAmountLocal = $saleItem->price_at_sale * $request->p_return_quantity;
             
-            // Profit Reduction must be calculated back to USD
-            // Reverse the rate: LocalPrice / Rate = USD Price
+            // Profit Reduction
             $rate = $sale->rate_to_usd_at_sale ?: 1;
             $unitPriceUsd = $saleItem->price_at_sale / $rate;
-            
             $profitReductionUsd = ($unitPriceUsd - $saleItem->cost_price_at_sale) * $request->p_return_quantity;
 
             $sale->decrement('total_price', $refundAmountLocal);
             $sale->decrement('total_profit', $profitReductionUsd);
+
+            // 🚨 معالجة الديون (Refund to Customer Balance if unpaid) 🚨
+            if ($sale->customer_id) {
+                $customer = $sale->customer;
+                // إذا كان الفاتورة ديناً (unpaid أو partial)، إرجاع البضاعة يقلل من دين العميل
+                // أما إذا كان دافع كاش، فيجب إعطاؤه كاش (لن نغير رصيده في الديون).
+                // للتبسيط في الـ POS: إرجاع البضاعة لعميل مسجل يعتبر دائماً تقليلاً لحسابه الإجمالي إذا كان مديناً.
+                if ($customer->balance > 0) {
+                    $reduceAmount = min($customer->balance, $refundAmountLocal);
+                    $customer->decrement('balance', $reduceAmount);
+                }
+            }
             
             return true;
         });
     }
+
+
 
     public function processExchange(Request $request) {
         return DB::transaction(function () use ($request) {

@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule; // <-- ADD THIS IMPORT
 
 class ExpenseController extends Controller
 {
@@ -16,15 +17,20 @@ class ExpenseController extends Controller
     }
 
     public function store(Request $request) {
-        // FIX: Validate and handle nullable category
         $validated = $request->validate([
             'description' => 'required|string',
             'amount' => 'required|numeric',
             'amount_in_currency' => 'nullable|numeric',
             'currency_code' => 'nullable|string|max:3',
             'expense_date' => 'required|date',
-            // 'nullable' allows sending null. 'exists' checks if the ID is valid.
-            'category_id' => 'nullable|integer|exists:expense_categories,id',
+            // FIX: Ensure category belongs to THIS user
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('expense_categories', 'id')->where(function ($query) use ($request) {
+                    $query->where('user_id', $request->user()->id);
+                }),
+            ],
             'recurrence' => 'nullable|string',
         ]);
 
@@ -38,7 +44,14 @@ class ExpenseController extends Controller
             'amount_in_currency' => 'nullable|numeric',
             'currency_code' => 'nullable|string|max:3',
             'expense_date' => 'sometimes|date',
-            'category_id' => 'nullable|integer|exists:expense_categories,id',
+            // FIX: Ensure category belongs to THIS user
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('expense_categories', 'id')->where(function ($query) use ($request) {
+                    $query->where('user_id', $request->user()->id);
+                }),
+            ],
             'recurrence' => 'nullable|string',
         ]);
 

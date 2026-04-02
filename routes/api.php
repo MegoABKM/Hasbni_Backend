@@ -11,6 +11,7 @@ use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\OwnerWithdrawalController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\CustomerController;
 
 // Public Routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -35,25 +36,40 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rpc/is_manager_password_set', [ProfileController::class, 'isManagerPasswordSet']);
 
     // Products
-    Route::apiResource('products', ProductController::class);
+    // Route::apiResource('products', ProductController::class);
 
     // Employees
     Route::apiResource('employees', EmployeeController::class);
 
     // Expenses & Categories
-    Route::apiResource('expenses', ExpenseController::class);
+    // Route::apiResource('expenses', ExpenseController::class);
     Route::apiResource('expense_categories', ExpenseCategoryController::class);
 
     // Withdrawals
-    Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
+    // Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
 
     // Sales (RPC replacements)
-    Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
-    Route::get('/sales', [SaleController::class, 'index']);
+    // Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
+    // Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/rpc/get_sale_details', fn(Request $r) => app(SaleController::class)->show($r, $r->p_sale_id));
     Route::post('/rpc/process_return', [SaleController::class, 'processReturn']);
     Route::post('/rpc/process_exchange', [SaleController::class, 'processExchange']);
 
     // Reports
+    // Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
+
+
+    // الروابط المتاحة للموظفين والمدير (نقطة البيع)
+Route::apiResource('products', ProductController::class)->only(['index']);
+Route::get('/sales', [SaleController::class, 'index']);
+Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
+// ... باقي مسارات المبيعات
+  Route::apiResource('customers', CustomerController::class);
+// 🚨 الروابط المحمية (للمدير فقط) 🚨
+Route::middleware(['auth:sanctum', 'manager'])->group(function () {
+    Route::apiResource('products', ProductController::class)->except(['index']); // إضافة/حذف منتجات
+    Route::apiResource('expenses', ExpenseController::class);
+    Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
     Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
+});
 });

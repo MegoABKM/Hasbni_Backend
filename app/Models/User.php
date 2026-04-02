@@ -56,4 +56,5 @@ class User extends Authenticatable
     public function withdrawals() { return $this->hasMany(OwnerWithdrawal::class); }
     public function exchangeRates() { return $this->hasMany(ExchangeRate::class); }
     public function sales() { return $this->hasMany(Sale::class); }
+    public function customers() { return $this->hasMany(Customer::class); }
 }

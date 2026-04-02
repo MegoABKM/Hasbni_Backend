@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         //
+    }) ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->alias([
+            'manager' => \App\Http\Middleware\EnsureManagerAccess::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    }) ->create();
+    
