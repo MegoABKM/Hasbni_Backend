@@ -16,4 +16,8 @@ class Customer extends Model {
     public function sales() {
         return $this->hasMany(Sale::class);
     }
+    // أضف هذه الدالة داخل الكلاس
+    public function payments() {
+        return $this->hasMany(CustomerPayment::class);
+    }
 }

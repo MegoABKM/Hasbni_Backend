@@ -36,4 +36,23 @@ class CustomerController extends Controller
         $request->user()->customers()->findOrFail($id)->delete();
         return response()->json(['success' => true]);
     }
+// لاستقبال دفعة جديدة من فلاتر
+    public function storePayment(Request $request, $id) {
+        $validated = $request->validate([
+            'amount' => 'required|numeric',
+            'payment_date' => 'required|date'
+        ]);
+        $customer = $request->user()->customers()->findOrFail($id);
+        $payment = $customer->payments()->create($validated);
+        return response()->json(['id' => $payment->id]);
+    }
+
+    // لجلب تاريخ الدفعات عند تثبيت التطبيق في هاتف جديد
+    public function getPayments(Request $request) {
+        return \App\Models\CustomerPayment::whereHas('customer', function($q) use ($request) {
+            $q->where('user_id', $request->user()->id);
+        })->get();
+    }
+
+
 }

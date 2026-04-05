@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     // ------------------------
+Route::get('/ping', function () {
+    return response()->json(['status' => 'online']);
+});
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -34,6 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rpc/set_manager_password', [ProfileController::class, 'setManagerPassword']);
     Route::post('/rpc/verify_manager_password', [ProfileController::class, 'verifyManagerPassword']);
     Route::post('/rpc/is_manager_password_set', [ProfileController::class, 'isManagerPasswordSet']);
+
+
+   Route::post('/customers/{id}/payments', [CustomerController::class, 'storePayment']);
+Route::get('/customer_payments', [CustomerController::class, 'getPayments']);
 
     // Products
     // Route::apiResource('products', ProductController::class);
