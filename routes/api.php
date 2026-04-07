@@ -61,7 +61,7 @@ Route::get('/customer_payments', [CustomerController::class, 'getPayments']);
     Route::post('/rpc/get_sale_details', fn(Request $r) => app(SaleController::class)->show($r, $r->p_sale_id));
     Route::post('/rpc/process_return', [SaleController::class, 'processReturn']);
     Route::post('/rpc/process_exchange', [SaleController::class, 'processExchange']);
-
+    
     // Reports
     // Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
 

@@ -8,9 +8,9 @@ class EmployeeController extends Controller {
     }
 
     public function store(Request $request) {
-        // FIX: Validate input
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
+            'pin_code' => 'required|string|max:50', // 👈 إضافة الرمز السري
         ]);
         return $request->user()->employees()->create($validated);
     }
@@ -18,6 +18,7 @@ class EmployeeController extends Controller {
     public function update(Request $request, $id) {
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
+            'pin_code' => 'required|string|max:50', // 👈 إضافة الرمز السري
         ]);
         $request->user()->employees()->findOrFail($id)->update($validated);
         return response()->json(['success'=>true]);
