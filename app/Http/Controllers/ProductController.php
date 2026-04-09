@@ -29,6 +29,7 @@ class ProductController extends Controller
             'name' => 'required|string',
             'barcode' => 'nullable|string', // Allows null barcodes
             'quantity' => 'required|integer',
+            'alert_threshold' => 'required|integer',
             'cost_price' => 'required|numeric',
             'selling_price' => 'required|numeric',
         ]);
@@ -46,6 +47,7 @@ class ProductController extends Controller
             'name' => 'sometimes|string',
             'barcode' => 'nullable|string',
             'quantity' => 'sometimes|integer',
+               'alert_threshold' => 'sometimes|integer|min:1',
             'cost_price' => 'sometimes|numeric',
             'selling_price' => 'sometimes|numeric',
         ]);
