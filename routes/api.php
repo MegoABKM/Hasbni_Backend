@@ -17,17 +17,17 @@ use App\Http\Controllers\CustomerController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-// Protected Routes
-Route::middleware('auth:sanctum')->group(function () {
-    
-    // --- THIS WAS MISSING ---
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-    // ------------------------
+// 👈 تم إخراج الـ Ping خارج الجدار الناري للتحقق من الاتصال بسرعة
 Route::get('/ping', function () {
     return response()->json(['status' => 'online']);
 });
+
+// Protected Routes
+Route::middleware('auth:sanctum')->group(function () {
+    
+    Route::get('/user', function (Request $request) {
+        return $request->user();
+    });
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -38,45 +38,30 @@ Route::get('/ping', function () {
     Route::post('/rpc/verify_manager_password', [ProfileController::class, 'verifyManagerPassword']);
     Route::post('/rpc/is_manager_password_set', [ProfileController::class, 'isManagerPasswordSet']);
 
-
-   Route::post('/customers/{id}/payments', [CustomerController::class, 'storePayment']);
-Route::get('/customer_payments', [CustomerController::class, 'getPayments']);
-
-    // Products
-    // Route::apiResource('products', ProductController::class);
+    Route::post('/customers/{id}/payments', [CustomerController::class, 'storePayment']);
+    Route::get('/customer_payments', [CustomerController::class, 'getPayments']);
 
     // Employees
     Route::apiResource('employees', EmployeeController::class);
 
-    // Expenses & Categories
-    // Route::apiResource('expenses', ExpenseController::class);
+    // Expenses Categories
     Route::apiResource('expense_categories', ExpenseCategoryController::class);
 
-    // Withdrawals
-    // Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
-
-    // Sales (RPC replacements)
-    // Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
-    // Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/rpc/get_sale_details', fn(Request $r) => app(SaleController::class)->show($r, $r->p_sale_id));
     Route::post('/rpc/process_return', [SaleController::class, 'processReturn']);
     Route::post('/rpc/process_exchange', [SaleController::class, 'processExchange']);
     
-    // Reports
-    // Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
-
-
     // الروابط المتاحة للموظفين والمدير (نقطة البيع)
-Route::apiResource('products', ProductController::class)->only(['index']);
-Route::get('/sales', [SaleController::class, 'index']);
-Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
-// ... باقي مسارات المبيعات
-  Route::apiResource('customers', CustomerController::class);
-// 🚨 الروابط المحمية (للمدير فقط) 🚨
-Route::middleware(['auth:sanctum', 'manager'])->group(function () {
-    Route::apiResource('products', ProductController::class)->except(['index']); // إضافة/حذف منتجات
-    Route::apiResource('expenses', ExpenseController::class);
-    Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
-    Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
-});
+    Route::apiResource('products', ProductController::class)->only(['index']);
+    Route::get('/sales', [SaleController::class, 'index']);
+    Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
+    Route::apiResource('customers', CustomerController::class);
+    
+    // 🚨 الروابط المحمية (للمدير فقط) 🚨
+    Route::middleware(['manager'])->group(function () {
+        Route::apiResource('products', ProductController::class)->except(['index']); // إضافة/حذف منتجات
+        Route::apiResource('expenses', ExpenseController::class);
+        Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
+        Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
+    });
 });

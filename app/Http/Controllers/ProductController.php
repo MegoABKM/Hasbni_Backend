@@ -23,21 +23,18 @@ class ProductController extends Controller
         return $query->orderBy($sort, $dir)->paginate($request->limit ?? 20);
     }
 
-    public function store(Request $request) {
-        // 1. Validate Data (Prevents 500 Errors)
+ public function store(Request $request) {
         $validated = $request->validate([
             'name' => 'required|string',
-            'barcode' => 'nullable|string', // Allows null barcodes
+            'barcode' => 'nullable|string',
             'quantity' => 'required|integer',
-            'alert_threshold' => 'required|integer',
+            'alert_threshold' => 'required|integer', // 👈 يجب أن يكون موجوداً هنا
             'cost_price' => 'required|numeric',
             'selling_price' => 'required|numeric',
         ]);
 
-        // 2. Create Product safely
         return $request->user()->products()->create($validated);
     }
-
     public function update(Request $request, $id) {
         // 1. Find Product belonging to user
         $product = $request->user()->products()->findOrFail($id);
