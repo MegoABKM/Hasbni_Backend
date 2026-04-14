@@ -1,15 +1,51 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\ExchangeRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use App\Models\Profile;
 
 class ProfileController extends Controller
 {
+    public function upsert(Request $request)
+    {
+        $user = $request->user();
+
+        // 1. تحديث أو إنشاء البروفايل الأساسي
+        $profile = Profile::updateOrCreate(
+            ['user_id' => $user->id],
+            $request->only(['shop_name', 'address', 'phone_number', 'city'])
+        );
+
+        // 2. تحديث أسعار الصرف المرتبطة بالمستخدم (وليس البروفايل)
+        if ($request->has('exchange_rates') && is_array($request->exchange_rates)) {
+            
+            $user->exchangeRates()->delete();
+
+            $ratesData = [];
+            foreach ($request->exchange_rates as $rate) {
+                if (isset($rate['rate_to_usd']) && $rate['rate_to_usd'] > 0) {
+                    $ratesData[] = new ExchangeRate([
+                        'currency_code' => strtoupper($rate['currency_code']),
+                        'rate_to_usd' => (float) $rate['rate_to_usd'],
+                    ]);
+                }
+            }
+
+            if (!empty($ratesData)) {
+                $user->exchangeRates()->saveMany($ratesData);
+            }
+        }
+
+        // 👈 إرجاع البروفايل مع إرفاق العملات يدوياً ليتعرف عليها فلاتر
+        $profile->exchange_rates = $user->exchangeRates;
+        return response()->json($profile, 200);
+    }
+
     public function show(Request $request) {
         $user = $request->user();
         
-        // Safety: Create profile if missing
         if (!$user->profile) {
             $user->profile()->create([
                 'shop_name' => $user->name ? $user->name . "'s Shop" : 'My Shop',
@@ -20,62 +56,20 @@ class ProfileController extends Controller
         }
 
         $profile = $user->profile;
-        $profile->exchange_rates = $user->exchangeRates;
+        // 👈 جلب العملات من المستخدم (User) وليس البروفايل
+        $profile->exchange_rates = $user->exchangeRates; 
         return $profile;
     }
 
     public function update(Request $request) {
-        // 1. VALIDATE INPUT
-        $request->validate([
-            'shop_name' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|string|max:50',
-            'city' => 'nullable|string|max:100',
-            'exchange_rates' => 'nullable|array',
-            'exchange_rates.*.currency_code' => 'required|string',
-            'exchange_rates.*.rate_to_usd' => 'required|numeric',
-        ]);
-
-        $user = $request->user();
-
-        // 2. SAFETY: Ensure Profile Exists before updating
-        // This prevents the "Call to a member function update() on null" 500 error
-        $profile = $user->profile()->firstOrCreate(
-            [], // Conditions
-            ['shop_name' => 'New Shop'] // Default if creating
-        );
-
-        // 3. UPDATE PROFILE
-        $profile->update($request->only(['shop_name', 'address', 'phone_number', 'city']));
-
-        // 4. UPSERT EXCHANGE RATES
-        if ($request->has('exchange_rates')) {
-            foreach ($request->exchange_rates as $rate) {
-                // Determine rate based on incoming data type
-                $rateValue = is_array($rate) ? $rate['rate_to_usd'] : $rate;
-                $code = is_array($rate) ? $rate['currency_code'] : null;
-
-                if ($code) {
-                    $user->exchangeRates()->updateOrCreate(
-                        ['currency_code' => $code], // Search by Code AND User ID
-                        ['rate_to_usd' => $rateValue]
-                    );
-                }
-            }
-        }
-        
-        // Return fresh data
-        return $this->show($request);
+        return $this->upsert($request); 
     }
 
     public function setManagerPassword(Request $request) {
         $request->validate(['p_password' => 'required']);
-        
         $user = $request->user();
-        if (!$user->profile) {
-             $user->profile()->create(['shop_name' => 'My Shop']);
-        }
-
+        if (!$user->profile) $user->profile()->create(['shop_name' => 'My Shop']);
+        
         $user->profile()->update([
             'manager_password' => Hash::make($request->p_password)
         ]);
@@ -95,3 +89,29 @@ class ProfileController extends Controller
         return response()->json((bool)$user->profile->manager_password);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

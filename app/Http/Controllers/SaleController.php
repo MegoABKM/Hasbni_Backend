@@ -75,7 +75,7 @@ class SaleController extends Controller
     // دوال المساعدة (Private Logic) لتنفيذ العمليات بأمان داخل قاعدة البيانات
     // =========================================================================
 
-    private function executeStore($user, $data) {
+ private function executeStore($user, $data) {
         return DB::transaction(function () use ($user, $data) {
             $saleTotalInCurrency = 0; 
             $totalProfitInUsd = 0;   
@@ -122,6 +122,7 @@ class SaleController extends Controller
                 $paymentStatus = 'partial';
             }
 
+            // 👈 إنشاء الفاتورة مع المتغيرات الجديدة
             $sale = $user->sales()->create([
                 'employee_id' => $data['p_employee_id'] ?? null,
                 'customer_id' => $data['p_customer_id'] ?? null,
@@ -133,6 +134,12 @@ class SaleController extends Controller
                 'tax_amount' => $taxAmount,
                 'paid_amount' => $paidAmount,
                 'payment_status' => $paymentStatus,
+                
+                // 👈 الحقول المحاسبية الجديدة القادمة من فلاتر
+                'tendered_amount' => $data['p_tendered_amount'] ?? 0,
+                'tendered_currency' => $data['p_tendered_currency'] ?? null,
+                'change_amount' => $data['p_change_amount'] ?? 0,
+                'change_currency' => $data['p_change_currency'] ?? null,
             ]);
 
             $sale->items()->createMany($saleItemsData);
@@ -140,7 +147,6 @@ class SaleController extends Controller
             return $sale->id; // إرجاع رقم الفاتورة
         });
     }
-
     private function executeReturn($user, $saleItemId, $returnQty) {
         return DB::transaction(function () use ($user, $saleItemId, $returnQty) {
             $saleItem = \App\Models\SaleItem::whereHas('sale', function($q) use ($user){
