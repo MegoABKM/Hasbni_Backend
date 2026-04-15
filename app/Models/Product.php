@@ -16,6 +16,7 @@ class Product extends Model {
         'alert_threshold', // 👈 العمود المفقود الذي كان يسبب الخطأ
         'cost_price',
         'selling_price',
-        'user_id'
+        'user_id' , 
+          'partner_id'
     ];
 }

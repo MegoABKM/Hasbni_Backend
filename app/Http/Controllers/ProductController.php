@@ -31,6 +31,7 @@ class ProductController extends Controller
             'alert_threshold' => 'required|integer', // 👈 يجب أن يكون موجوداً هنا
             'cost_price' => 'required|numeric',
             'selling_price' => 'required|numeric',
+                 'partner_id' => 'nullable|integer',
         ]);
 
         return $request->user()->products()->create($validated);
@@ -47,6 +48,7 @@ class ProductController extends Controller
                'alert_threshold' => 'sometimes|integer|min:1',
             'cost_price' => 'sometimes|numeric',
             'selling_price' => 'sometimes|numeric',
+             'partner_id' => 'nullable|integer',
         ]);
 
         // 3. Update
