@@ -64,4 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
         Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
     });
+    Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync']);
+Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']); // 👈
+
 });
