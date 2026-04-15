@@ -30,7 +30,18 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/logout', [AuthController::class, 'logout']);
-
+// Partnership Routes
+    Route::get('/partnership/pull', [\App\Http\Controllers\PartnershipController::class, 'pull']);
+    Route::post('/partnership/partner', [\App\Http\Controllers\PartnershipController::class, 'syncPartner']);
+    Route::put('/partnership/partner/{id}', [\App\Http\Controllers\PartnershipController::class, 'updatePartner']);
+    Route::delete('/partnership/partner/{id}', [\App\Http\Controllers\PartnershipController::class, 'deletePartner']);
+    
+    Route::post('/partnership/good', [\App\Http\Controllers\PartnershipController::class, 'syncGood']);
+    Route::put('/partnership/good/{id}', [\App\Http\Controllers\PartnershipController::class, 'updateGood']);
+    Route::delete('/partnership/good/{id}', [\App\Http\Controllers\PartnershipController::class, 'deleteGood']);
+    
+    Route::post('/partnership/record', [\App\Http\Controllers\PartnershipController::class, 'syncRecord']);
+    Route::delete('/partnership/record-item/{id}', [\App\Http\Controllers\PartnershipController::class, 'deleteRecordItem']);
     // Profile (RPC replacements)
     Route::get('/profiles', [ProfileController::class, 'show']); 
     Route::post('/profiles', [ProfileController::class, 'update']);
