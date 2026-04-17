@@ -6,11 +6,9 @@ use Illuminate\Support\Facades\DB;
 
 class CashController extends Controller
 {
-    // 1. الدالة السابقة: استقبال البيانات من الهاتف (Push)
     public function sync(Request $request)
     {
         $user = $request->user();
-        
         DB::transaction(function () use ($user, $request) {
             if ($request->has('drawers')) {
                 foreach ($request->drawers as $drawer) {
@@ -20,22 +18,19 @@ class CashController extends Controller
                     );
                 }
             }
-
             if ($request->has('transactions') && is_array($request->transactions)) {
                 $user->cashTransactions()->createMany($request->transactions);
             }
         });
-
         return response()->json(['success' => true]);
     }
 
-    // 2. الدالة الجديدة: إرسال بيانات الخزينة للهاتف (Pull) 👈
+    // 👈 التعديل هنا: إضافة حركات الكاشيرية ليتم سحبها للهاتف الجديد
     public function getDrawers(Request $request)
     {
-        // نكتفي بإرجاع الأرصدة (Drawers) لأن الهاتف يحتاجها لمعرفة النقد المتاح
-        // (لا داعي لإرجاع كل الحركات القديمة لتوفير مساحة الهاتف، الرصيد هو الأهم)
         return response()->json([
-            'drawers' => $request->user()->cashDrawers()->get(['currency_code', 'balance'])
+            'drawers' => $request->user()->cashDrawers()->get(['currency_code', 'balance']),
+            'transactions' => $request->user()->cashTransactions()->get() // 👈 هذا السطر الجديد
         ]);
     }
 }

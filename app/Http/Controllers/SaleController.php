@@ -83,10 +83,14 @@ class SaleController extends Controller
             $rateToUsd = $data['p_rate_to_usd_at_sale'] ?? 1.0;
 
             foreach ($data['p_sale_items_data'] as $itemData) {
+                // 👈 تم وضع lockForUpdate لتجنب مشاكل التزامن
                 $product = $user->products()->lockForUpdate()->find($itemData['product_id']);
-                if (!$product) throw new \Exception("Product not found");
-                if ($product->quantity < $itemData['quantity']) throw new \Exception("Insufficient stock");
+                if (!$product) continue; // 👈 تجاهل المنتج إذا كان محذوفاً بدلاً من إيقاف الفاتورة بالكامل
 
+                // 🚨 قم بحذف هذا السطر تماماً من كودك القديم:
+                // if ($product->quantity < $itemData['quantity']) throw new \Exception("Insufficient stock");
+
+                // دعه يخصم الكمية حتى لو أصبحت بالسالب (لأن البيع حدث بالفعل في الهاتف)
                 $product->decrement('quantity', $itemData['quantity']);
 
                 $qty = $itemData['quantity'];
@@ -147,6 +151,9 @@ class SaleController extends Controller
             return $sale->id; // إرجاع رقم الفاتورة
         });
     }
+
+
+    
     private function executeReturn($user, $saleItemId, $returnQty) {
         return DB::transaction(function () use ($user, $saleItemId, $returnQty) {
             $saleItem = \App\Models\SaleItem::whereHas('sale', function($q) use ($user){
@@ -174,4 +181,6 @@ class SaleController extends Controller
             return true;
         });
     }
-}
+
+
+    }
