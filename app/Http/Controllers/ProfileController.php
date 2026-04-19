@@ -15,7 +15,7 @@ class ProfileController extends Controller
         // 1. تحديث أو إنشاء البروفايل الأساسي
         $profile = Profile::updateOrCreate(
             ['user_id' => $user->id],
-            $request->only(['shop_name', 'address', 'phone_number', 'city'])
+            $request->only(['shop_name', 'address', 'phone_number', 'city' , 'taxes','discounts'])
         );
 
         // 2. تحديث أسعار الصرف المرتبطة بالمستخدم (وليس البروفايل)

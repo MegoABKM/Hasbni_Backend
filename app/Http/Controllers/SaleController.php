@@ -8,25 +8,21 @@ use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
-    // 1. جلب المبيعات
     public function index(Request $request) {
         return $request->user()->sales()
             ->latest()
             ->paginate($request->limit ?? 20);
     }
 
-    // 2. جلب تفاصيل فاتورة معينة
     public function show(Request $request, $id) {
         return $request->user()->sales()->with('items')->findOrFail($id);
     }
 
-    // 3. إنشاء بيع جديد (يستدعي الدالة الخاصة)
     public function store(Request $request) {
         $saleId = $this->executeStore($request->user(), $request->all());
         return response()->json(['id' => $saleId]);
     }
 
-    // 4. إرجاع منتج (يستدعي الدالة الخاصة)
     public function processReturn(Request $request) {
         $request->validate([
             'p_sale_item_id' => 'required',
@@ -37,18 +33,15 @@ class SaleController extends Controller
         return response()->json(true);
     }
 
-    // 5. الاستبدال (يجمع بين الإرجاع والبيع الجديد)
     public function processExchange(Request $request) {
         return DB::transaction(function () use ($request) {
             $user = $request->user();
             
-            // أ. تنفيذ الإرجاع
             $this->executeReturn($user, $request->p_sale_item_id_to_return, $request->p_return_quantity);
             
             $returnedItem = \App\Models\SaleItem::find($request->p_sale_item_id_to_return);
             $returnedValueLocal = $returnedItem->price_at_sale * $request->p_return_quantity;
 
-            // ب. إنشاء بيع جديد
             $newSaleId = $this->executeStore($user, [
                 'p_sale_items_data' => $request->p_new_sale_items_data,
                 'p_currency_code' => $request->p_currency_code,
@@ -56,8 +49,12 @@ class SaleController extends Controller
                 'p_employee_id' => $request->p_employee_id,
                 'p_customer_id' => $request->p_customer_id ?? null,
                 'p_discount_amount' => $request->p_discount_amount ?? 0,
-                'p_tax_percentage' => $request->p_tax_percentage ?? 0,
+                'p_tax_amount' => $request->p_tax_amount ?? 0, // 👈 التعديل هنا: نرسل المبلغ مباشرة
                 'p_paid_amount' => $request->p_paid_amount ?? null,
+                'p_tendered_amount' => $request->p_tendered_amount ?? 0,
+                'p_tendered_currency' => $request->p_tendered_currency ?? null,
+                'p_change_amount' => $request->p_change_amount ?? 0,
+                'p_change_currency' => $request->p_change_currency ?? null,
             ]);
 
             $newSale = Sale::find($newSaleId);
@@ -71,11 +68,7 @@ class SaleController extends Controller
         });
     }
 
-    // =========================================================================
-    // دوال المساعدة (Private Logic) لتنفيذ العمليات بأمان داخل قاعدة البيانات
-    // =========================================================================
-
- private function executeStore($user, $data) {
+    private function executeStore($user, $data) {
         return DB::transaction(function () use ($user, $data) {
             $saleTotalInCurrency = 0; 
             $totalProfitInUsd = 0;   
@@ -83,14 +76,9 @@ class SaleController extends Controller
             $rateToUsd = $data['p_rate_to_usd_at_sale'] ?? 1.0;
 
             foreach ($data['p_sale_items_data'] as $itemData) {
-                // 👈 تم وضع lockForUpdate لتجنب مشاكل التزامن
                 $product = $user->products()->lockForUpdate()->find($itemData['product_id']);
-                if (!$product) continue; // 👈 تجاهل المنتج إذا كان محذوفاً بدلاً من إيقاف الفاتورة بالكامل
+                if (!$product) continue; 
 
-                // 🚨 قم بحذف هذا السطر تماماً من كودك القديم:
-                // if ($product->quantity < $itemData['quantity']) throw new \Exception("Insufficient stock");
-
-                // دعه يخصم الكمية حتى لو أصبحت بالسالب (لأن البيع حدث بالفعل في الهاتف)
                 $product->decrement('quantity', $itemData['quantity']);
 
                 $qty = $itemData['quantity'];
@@ -111,10 +99,10 @@ class SaleController extends Controller
             }
 
             $discount = $data['p_discount_amount'] ?? 0;
-            $taxPercentage = $data['p_tax_percentage'] ?? 0;
+            // 👈 التعديل هنا: الاعتماد على المبلغ المرسل من التطبيق بدلاً من الحساب الداخلي
+            $taxAmount = $data['p_tax_amount'] ?? 0; 
             
             $finalTotalLocal = $saleTotalInCurrency - $discount;
-            $taxAmount = $finalTotalLocal * ($taxPercentage / 100);
             $finalTotalLocal += $taxAmount;
 
             $paidAmount = $data['p_paid_amount'] ?? $finalTotalLocal;
@@ -126,7 +114,6 @@ class SaleController extends Controller
                 $paymentStatus = 'partial';
             }
 
-            // 👈 إنشاء الفاتورة مع المتغيرات الجديدة
             $sale = $user->sales()->create([
                 'employee_id' => $data['p_employee_id'] ?? null,
                 'customer_id' => $data['p_customer_id'] ?? null,
@@ -135,11 +122,9 @@ class SaleController extends Controller
                 'currency_code' => $data['p_currency_code'],
                 'rate_to_usd_at_sale' => $rateToUsd,
                 'discount_amount' => $discount,
-                'tax_amount' => $taxAmount,
+                'tax_amount' => $taxAmount, // 👈 حفظ المبلغ كما ورد من التطبيق تماماً
                 'paid_amount' => $paidAmount,
                 'payment_status' => $paymentStatus,
-                
-                // 👈 الحقول المحاسبية الجديدة القادمة من فلاتر
                 'tendered_amount' => $data['p_tendered_amount'] ?? 0,
                 'tendered_currency' => $data['p_tendered_currency'] ?? null,
                 'change_amount' => $data['p_change_amount'] ?? 0,
@@ -148,12 +133,10 @@ class SaleController extends Controller
 
             $sale->items()->createMany($saleItemsData);
 
-            return $sale->id; // إرجاع رقم الفاتورة
+            return $sale->id;
         });
     }
 
-
-    
     private function executeReturn($user, $saleItemId, $returnQty) {
         return DB::transaction(function () use ($user, $saleItemId, $returnQty) {
             $saleItem = \App\Models\SaleItem::whereHas('sale', function($q) use ($user){
@@ -181,6 +164,4 @@ class SaleController extends Controller
             return true;
         });
     }
-
-
-    }
+}
