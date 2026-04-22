@@ -7,14 +7,35 @@ use App\Models\PartnershipRecord;
 
 class PartnershipController extends Controller {
     // جلب كل بيانات الشراكة للموبايل دفعة واحدة
-    public function pull(Request $request) {
-        $user = $request->user();
+       public function pull(Request $request)
+    {
+        $userId = $request->user()->id;
+
+        $partners = \App\Models\Partner::where('user_id', $userId)->with('goods')->get();
+        
+        $records = \App\Models\PartnershipRecord::where('user_id', $userId)->with('items')->get();
+
+        $formattedRecords = $records->map(function ($record) {
+            return [
+                'id' => $record->id,
+                'record_date' => $record->record_date,
+                'items' => $record->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'good_id' => $item->partner_good_id, // 👈 إعادتها للتطبيق باسم good_id
+                        'quantity' => $item->quantity,
+                        'selling_price' => $item->selling_price,
+                        'cost_price_at_sale' => $item->cost_price_at_sale,
+                    ];
+                }),
+            ];
+        });
+
         return response()->json([
-            'partners' => $user->partners()->with('goods')->get(),
-            'records' => $user->partnershipRecords()->with('items')->get()
+            'partners' => $partners,
+            'records' => $formattedRecords
         ]);
     }
-
     public function syncPartner(Request $request) {
         $data = $request->validate(['name' => 'required', 'profit_share_percentage' => 'required']);
         $partner = $request->user()->partners()->create($data);
@@ -42,11 +63,31 @@ class PartnershipController extends Controller {
         return response()->json(true);
     }
 
-    public function syncRecord(Request $request) {
-        $record = $request->user()->partnershipRecords()->firstOrCreate(['record_date' => $request->record_date]);
-        $item = $record->items()->create($request->only(['good_id', 'quantity', 'selling_price', 'cost_price_at_sale']));
+  public function syncRecord(Request $request)
+    {
+        $request->validate([
+            'record_date' => 'required|date',
+            'good_id' => 'required|exists:partner_goods,id',
+            'quantity' => 'required|integer',
+            'selling_price' => 'required|numeric',
+            'cost_price_at_sale' => 'required|numeric',
+        ]);
+
+        $record = PartnershipRecord::firstOrCreate([
+            'user_id' => $request->user()->id,
+            'record_date' => $request->record_date,
+        ]);
+
+        $item = $record->items()->create([
+            'partner_good_id' => $request->good_id, // 👈 تحويل الاسم ليتطابق مع قاعدة البيانات
+            'quantity' => $request->quantity,
+            'selling_price' => $request->selling_price,
+            'cost_price_at_sale' => $request->cost_price_at_sale,
+        ]);
+
         return response()->json(['id' => $record->id, 'item_id' => $item->id]);
     }
+
     public function deleteRecordItem($id) {
         \App\Models\PartnershipRecordItem::findOrFail($id)->delete();
         return response()->json(true);
