@@ -9,14 +9,18 @@ class Product extends Model {
     use SoftDeletes; 
     
     // 👈 تم التعديل: إضافة جميع الحقول المسموح تعديلها (Mass Assignment)
-    protected $fillable = [
+ protected $fillable = [
         'name',
         'barcode',
         'quantity',
-        'alert_threshold', // 👈 العمود المفقود الذي كان يسبب الخطأ
+        'alert_threshold', 
         'cost_price',
         'selling_price',
+        'last_purchase_price', // 👈 إضافة هنا
         'user_id' , 
-          'partner_id'
+        'partner_id'
     ];
+
+    public function movements() { return $this->hasMany(InventoryMovement::class); }
+    
 }

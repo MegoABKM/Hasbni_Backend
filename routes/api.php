@@ -28,7 +28,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-
+    Route::get('/inventory/movements', [\App\Http\Controllers\InventoryController::class, 'index']); // 👈 إضافة
+Route::post('/inventory/movements/sync', [\App\Http\Controllers\InventoryController::class, 'syncMovements']);
     Route::post('/logout', [AuthController::class, 'logout']);
 // Partnership Routes
     Route::get('/partnership/pull', [\App\Http\Controllers\PartnershipController::class, 'pull']);

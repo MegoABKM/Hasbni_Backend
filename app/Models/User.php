@@ -59,7 +59,7 @@ class User extends Authenticatable
     public function customers() { return $this->hasMany(Customer::class); }
     public function cashDrawers() { return $this->hasMany(CashDrawer::class); }
     public function cashTransactions() { return $this->hasMany(CashTransaction::class); }
-
+public function inventoryMovements() { return $this->hasMany(InventoryMovement::class); }
 
     // أضف هذه السطرين داخل كلاس User مع بقية العلاقات
     public function partners() { return $this->hasMany(Partner::class); }
