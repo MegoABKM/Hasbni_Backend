@@ -78,5 +78,11 @@ Route::post('/inventory/movements/sync', [\App\Http\Controllers\InventoryControl
     });
     Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync']);
 Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']); // 👈
-
+Route::get('/app-status', function() {
+    return response()->json([
+        'min_version' => \App\Models\AppConfig::where('key', 'min_version')->value('value') ?? '1.0.0',
+        'is_disabled' => \App\Models\AppConfig::where('key', 'is_disabled')->value('value') === 'true',
+        'update_url' => \App\Models\AppConfig::where('key', 'update_url')->value('value') ?? 'https://bhasbni.com',
+    ]);
+});
 });
