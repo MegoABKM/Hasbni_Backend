@@ -68,9 +68,13 @@ Route::post('/inventory/movements/sync', [\App\Http\Controllers\InventoryControl
     Route::get('/sales', [SaleController::class, 'index']);
     Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
     Route::apiResource('customers', CustomerController::class);
-    
+    // الموردين (Suppliers)
+    Route::apiResource('suppliers', App\Http\Controllers\SupplierController::class);
+    Route::post('/suppliers/{id}/payments', [App\Http\Controllers\SupplierController::class, 'storePayment']);
+    Route::get('/supplier_payments', [App\Http\Controllers\SupplierController::class, 'getPayments']);
     // 🚨 الروابط المحمية (للمدير فقط) 🚨
     Route::middleware(['manager'])->group(function () {
+        Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index']);
         Route::apiResource('products', ProductController::class)->except(['index']); // إضافة/حذف منتجات
         Route::apiResource('expenses', ExpenseController::class);
         Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
@@ -85,4 +89,7 @@ Route::get('/app-status', function() {
         'update_url' => \App\Models\AppConfig::where('key', 'update_url')->value('value') ?? 'https://bhasbni.com',
     ]);
 });
+
+
+
 });

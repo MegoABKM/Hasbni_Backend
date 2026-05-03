@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model {
-    use SoftDeletes; 
+    use SoftDeletes ,  \App\Traits\Auditable; 
     
     // 👈 تم التعديل: إضافة جميع الحقول المسموح تعديلها (Mass Assignment)
  protected $fillable = [

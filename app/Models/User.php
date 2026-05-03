@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens; // <--- IMPORT THIS
+use App\Models\Supplier;          // 👈 إضافة 
+use App\Models\SupplierPayment;
+
 
 class User extends Authenticatable
 {
@@ -64,4 +67,7 @@ public function inventoryMovements() { return $this->hasMany(InventoryMovement::
     // أضف هذه السطرين داخل كلاس User مع بقية العلاقات
     public function partners() { return $this->hasMany(Partner::class); }
     public function partnershipRecords() { return $this->hasMany(PartnershipRecord::class); }
-}
+    public function suppliers() { return $this->hasMany(Supplier::class); }
+    public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
+
+    }
