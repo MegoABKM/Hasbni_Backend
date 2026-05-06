@@ -23,37 +23,51 @@ class ProductController extends Controller
         return $query->orderBy($sort, $dir)->paginate($request->limit ?? 20);
     }
 
- public function store(Request $request) {
+    public function store(Request $request) {
         $validated = $request->validate([
             'name' => 'required|string',
             'barcode' => 'nullable|string',
             'quantity' => 'required|integer',
-            'alert_threshold' => 'required|integer', // 👈 يجب أن يكون موجوداً هنا
+            'alert_threshold' => 'required|integer',
             'cost_price' => 'required|numeric',
             'selling_price' => 'required|numeric',
-              'last_purchase_price' => 'nullable|numeric',
-                 'partner_id' => 'nullable|integer',
+            'last_purchase_price' => 'nullable|numeric',
+            'partner_id' => 'nullable|integer',
+            'created_at' => 'nullable|date',
         ]);
+
+        // 🚨 Server-Side Deduplication
+        $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
+
+        if ($clientCreatedAt) {
+            $existing = $request->user()->products()
+                ->where('name', $validated['name'])
+                ->where('created_at', $clientCreatedAt)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+            $validated['created_at'] = $clientCreatedAt;
+            $validated['updated_at'] = $clientCreatedAt;
+        }
 
         return $request->user()->products()->create($validated);
     }
+
     public function update(Request $request, $id) {
-        // 1. Find Product belonging to user
         $product = $request->user()->products()->findOrFail($id);
 
-        // 2. Validate Data
         $validated = $request->validate([
             'name' => 'sometimes|string',
             'barcode' => 'nullable|string',
             'quantity' => 'sometimes|integer',
-               'alert_threshold' => 'sometimes|integer|min:1',
+            'alert_threshold' => 'sometimes|integer|min:1',
             'cost_price' => 'sometimes|numeric',
             'selling_price' => 'sometimes|numeric',
-              'last_purchase_price' => 'nullable|numeric',
-             'partner_id' => 'nullable|integer',
+            'last_purchase_price' => 'nullable|numeric',
+            'partner_id' => 'nullable|integer',
         ]);
 
-        // 3. Update
         $product->update($validated);
         return $product;
     }

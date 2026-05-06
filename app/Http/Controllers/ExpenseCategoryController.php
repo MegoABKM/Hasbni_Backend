@@ -9,14 +9,17 @@ class ExpenseCategoryController extends Controller
     }
 
     public function store(Request $request) {
-        // FIX: Validate input
         $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
+
+        // Anti-Duplication
+        $existing = $request->user()->expenseCategories()->where('name', $validated['name'])->first();
+        if ($existing) return $existing;
+
         return $request->user()->expenseCategories()->create($validated);
     }
     
-    // Note: You should probably add destroy/update here eventually to complete sync logic
     public function destroy(Request $request, $id) {
          $request->user()->expenseCategories()->findOrFail($id)->delete();
          return response()->json(['success'=>true]);

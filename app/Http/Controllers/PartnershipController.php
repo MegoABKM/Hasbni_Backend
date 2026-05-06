@@ -6,13 +6,12 @@ use App\Models\PartnerGood;
 use App\Models\PartnershipRecord;
 
 class PartnershipController extends Controller {
-    // جلب كل بيانات الشراكة للموبايل دفعة واحدة
-       public function pull(Request $request)
+    
+    public function pull(Request $request)
     {
         $userId = $request->user()->id;
 
         $partners = \App\Models\Partner::where('user_id', $userId)->with('goods')->get();
-        
         $records = \App\Models\PartnershipRecord::where('user_id', $userId)->with('items')->get();
 
         $formattedRecords = $records->map(function ($record) {
@@ -22,7 +21,7 @@ class PartnershipController extends Controller {
                 'items' => $record->items->map(function ($item) {
                     return [
                         'id' => $item->id,
-                        'good_id' => $item->partner_good_id, // 👈 إعادتها للتطبيق باسم good_id
+                        'good_id' => $item->partner_good_id,
                         'quantity' => $item->quantity,
                         'selling_price' => $item->selling_price,
                         'cost_price_at_sale' => $item->cost_price_at_sale,
@@ -36,34 +35,49 @@ class PartnershipController extends Controller {
             'records' => $formattedRecords
         ]);
     }
+
     public function syncPartner(Request $request) {
         $data = $request->validate(['name' => 'required', 'profit_share_percentage' => 'required']);
-        $partner = $request->user()->partners()->create($data);
+        
+        // Anti-Duplication
+        $partner = $request->user()->partners()->firstOrCreate(
+            ['name' => $data['name']], 
+            ['profit_share_percentage' => $data['profit_share_percentage']]
+        );
+        
         return response()->json(['id' => $partner->id]);
     }
+
     public function updatePartner(Request $request, $id) {
         $request->user()->partners()->findOrFail($id)->update($request->only(['name', 'profit_share_percentage']));
         return response()->json(true);
     }
+
     public function deletePartner(Request $request, $id) {
         $request->user()->partners()->findOrFail($id)->delete();
         return response()->json(true);
     }
 
     public function syncGood(Request $request) {
-        $good = PartnerGood::create($request->only(['partner_id', 'name', 'cost_price']));
+        // Anti-Duplication
+        $good = PartnerGood::firstOrCreate(
+            ['partner_id' => $request->partner_id, 'name' => $request->name],
+            ['cost_price' => $request->cost_price]
+        );
         return response()->json(['id' => $good->id]);
     }
+
     public function updateGood(Request $request, $id) {
         PartnerGood::findOrFail($id)->update($request->only(['name', 'cost_price']));
         return response()->json(true);
     }
+
     public function deleteGood($id) {
         PartnerGood::findOrFail($id)->delete();
         return response()->json(true);
     }
 
-  public function syncRecord(Request $request)
+    public function syncRecord(Request $request)
     {
         $request->validate([
             'record_date' => 'required|date',
@@ -78,12 +92,17 @@ class PartnershipController extends Controller {
             'record_date' => $request->record_date,
         ]);
 
-        $item = $record->items()->create([
-            'partner_good_id' => $request->good_id, // 👈 تحويل الاسم ليتطابق مع قاعدة البيانات
-            'quantity' => $request->quantity,
-            'selling_price' => $request->selling_price,
-            'cost_price_at_sale' => $request->cost_price_at_sale,
-        ]);
+        // Anti-Duplication for Items
+        $item = $record->items()->firstOrCreate(
+            [
+                'partner_good_id' => $request->good_id,
+                'quantity' => $request->quantity,
+                'selling_price' => $request->selling_price,
+            ],
+            [
+                'cost_price_at_sale' => $request->cost_price_at_sale,
+            ]
+        );
 
         return response()->json(['id' => $record->id, 'item_id' => $item->id]);
     }

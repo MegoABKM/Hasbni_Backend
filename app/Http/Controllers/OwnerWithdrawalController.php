@@ -8,15 +8,27 @@ class OwnerWithdrawalController extends Controller {
     }
 
     public function store(Request $request) {
-        // FIX: Validate numeric amount and valid date
         $validated = $request->validate([
             'description' => 'nullable|string',
             'amount' => 'required|numeric',
             'amount_in_currency' => 'nullable|numeric',
             'currency_code' => 'nullable|string|max:3',
             'withdrawal_date' => 'required|date',
+            'created_at' => 'nullable|date',
         ]);
         
+        // 🚨 Server-Side Deduplication
+        $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
+        if ($clientCreatedAt) {
+            $existing = $request->user()->withdrawals()
+                ->where('description', $validated['description'])
+                ->where('created_at', $clientCreatedAt)
+                ->first();
+            if ($existing) return $existing;
+            $validated['created_at'] = $clientCreatedAt;
+            $validated['updated_at'] = $clientCreatedAt;
+        }
+
         return $request->user()->withdrawals()->create($validated);
     }
 

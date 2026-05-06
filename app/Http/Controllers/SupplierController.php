@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class SupplierController extends Controller
 {
@@ -16,10 +17,17 @@ class SupplierController extends Controller
             'phone' => 'nullable|string|max:50',
             'balance' => 'nullable|numeric',
         ]);
+
+        // Anti-Duplication by Name
+        $existing = $request->user()->suppliers()->where('name', $validated['name'])->first();
+        if ($existing) {
+            return $existing;
+        }
+
         return $request->user()->suppliers()->create($validated);
     }
 
-    public function update(Request $request,int $id) {
+    public function update(Request $request, int $id) {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'phone' => 'nullable|string|max:50',
@@ -40,8 +48,27 @@ class SupplierController extends Controller
             'amount' => 'required|numeric',
             'payment_date' => 'required|date'
         ]);
+
         $supplier = $request->user()->suppliers()->findOrFail($id);
-        $payment = $supplier->payments()->create($validated);
+        $clientDate = Carbon::parse($validated['payment_date'])->format('Y-m-d H:i:s');
+
+        // Anti-Duplication for Payments
+        $existing = $supplier->payments()
+            ->where('amount', $validated['amount'])
+            ->where('payment_date', $clientDate)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['id' => $existing->id]);
+        }
+
+        $payment = $supplier->payments()->create([
+            'amount' => $validated['amount'],
+            'payment_date' => $clientDate,
+            'created_at' => $clientDate,
+            'updated_at' => $clientDate,
+        ]);
+
         return response()->json(['id' => $payment->id]);
     }
 

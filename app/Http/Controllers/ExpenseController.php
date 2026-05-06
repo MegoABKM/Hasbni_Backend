@@ -1,7 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule; // <-- ADD THIS IMPORT
+use Illuminate\Validation\Rule; 
 
 class ExpenseController extends Controller
 {
@@ -23,7 +23,7 @@ class ExpenseController extends Controller
             'amount_in_currency' => 'nullable|numeric',
             'currency_code' => 'nullable|string|max:3',
             'expense_date' => 'required|date',
-            // FIX: Ensure category belongs to THIS user
+            'created_at' => 'nullable|date',
             'category_id' => [
                 'nullable',
                 'integer',
@@ -33,6 +33,18 @@ class ExpenseController extends Controller
             ],
             'recurrence' => 'nullable|string',
         ]);
+
+        // 🚨 Server-Side Deduplication
+        $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
+        if ($clientCreatedAt) {
+            $existing = $request->user()->expenses()
+                ->where('description', $validated['description'])
+                ->where('created_at', $clientCreatedAt)
+                ->first();
+            if ($existing) return $existing;
+            $validated['created_at'] = $clientCreatedAt;
+            $validated['updated_at'] = $clientCreatedAt;
+        }
 
         return $request->user()->expenses()->create($validated);
     }
@@ -44,7 +56,6 @@ class ExpenseController extends Controller
             'amount_in_currency' => 'nullable|numeric',
             'currency_code' => 'nullable|string|max:3',
             'expense_date' => 'sometimes|date',
-            // FIX: Ensure category belongs to THIS user
             'category_id' => [
                 'nullable',
                 'integer',
