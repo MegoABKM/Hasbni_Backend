@@ -7,16 +7,17 @@ class EmployeeController extends Controller {
         return $request->user()->employees;
     }
 
-    public function store(Request $request) {
+   public function store(Request $request) {
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'pin_code' => 'required|string|max:50',
+            'can_add_expenses' => 'boolean',
+            'can_receive_payments' => 'boolean',
+            'can_make_withdrawals' => 'boolean',
+            'can_pay_suppliers' => 'boolean',
         ]);
-
-        // Anti-Duplication
         $existing = $request->user()->employees()->where('full_name', $validated['full_name'])->first();
         if ($existing) return $existing;
-
         return $request->user()->employees()->create($validated);
     }
 
@@ -24,6 +25,10 @@ class EmployeeController extends Controller {
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'pin_code' => 'required|string|max:50',
+            'can_add_expenses' => 'boolean',
+            'can_receive_payments' => 'boolean',
+            'can_make_withdrawals' => 'boolean',
+            'can_pay_suppliers' => 'boolean',
         ]);
         $request->user()->employees()->findOrFail($id)->update($validated);
         return response()->json(['success'=>true]);

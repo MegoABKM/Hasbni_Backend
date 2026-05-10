@@ -1,12 +1,10 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -21,11 +19,26 @@ class AuthController extends Controller
         ]);
     }
 
-    public function register(Request $request) {
-        $data = $request->validate([
+  public function register(Request $request) {
+        // 🚀 التعديل هنا: استخدام Validator يدوياً للتحكم برسائل الخطأ
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6'
         ]);
+
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            
+            // إذا كان الخطأ بسبب أن الإيميل موجود مسبقاً
+            if ($errors->has('email') && $errors->first('email') === 'The email has already been taken.') {
+                return response()->json(['message' => 'error_messages.email_taken'], 422);
+            }
+            
+            // أي خطأ تحقق آخر (مثل الباسورد قصير)
+            return response()->json(['message' => 'error_messages.validation_error'], 422);
+        }
+
+        $data = $validator->validated();
 
         $user = User::create([
             'name' => 'Shop Owner',
@@ -36,20 +49,19 @@ class AuthController extends Controller
         $user->profile()->create(['shop_name' => 'My Shop']);
         
         $this->logAuthEvent($user, 'registered');
-
         $token = $user->createToken('mobile')->plainTextToken;
         return response()->json(['access_token' => $token, 'user' => $user]);
     }
 
-    public function login(Request $request) {
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json(['message' => 'بيانات الدخول غير صحيحة'], 401);
+ public function login(Request $request) {
+        $user = User::where('email', $request->email)->first();
+
+        // 🚀 إرجاع مفتاح الترجمة invalid_credentials بدلاً من النص
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'invalid_credentials'], 401);
         }
         
-        $user = User::where('email', $request->email)->firstOrFail();
-        
         $this->logAuthEvent($user, 'login');
-
         $token = $user->createToken('mobile')->plainTextToken;
         return response()->json(['access_token' => $token, 'user' => $user]);
     }

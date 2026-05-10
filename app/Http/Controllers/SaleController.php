@@ -117,9 +117,11 @@ class SaleController extends Controller
                 ];
             }
 
+            // 🚨 التعديل هنا: إضافة invoice_number و has_returns للحفظ في السيرفر 🚨
             $saleData = [
                 'employee_id' => $data['p_employee_id'] ?? null,
                 'customer_id' => $data['p_customer_id'] ?? null,
+                'invoice_number' => $data['p_invoice_number'] ?? null, // 👈
                 'total_price' => $data['p_total_price'] ?? 0, 
                 'total_profit' => $data['p_total_profit'] ?? 0, 
                 'currency_code' => $data['p_currency_code'],
@@ -132,6 +134,7 @@ class SaleController extends Controller
                 'tendered_currency' => $data['p_tendered_currency'] ?? null,
                 'change_amount' => $data['p_change_amount'] ?? 0,
                 'change_currency' => $data['p_change_currency'] ?? null,
+                'has_returns' => $data['p_has_returns'] ?? false, // 👈
             ];
 
             if ($clientCreatedAt) {
