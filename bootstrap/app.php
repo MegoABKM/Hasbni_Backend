@@ -11,10 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware): void {
-        // جمع كل تعليمات الميدل وير في كتلة واحدة
+   ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'manager' => \App\Http\Middleware\EnsureManagerAccess::class,
+            'plan' => \App\Http\Middleware\EnforcePlanLimits::class, // <--- ADD THIS LINE
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

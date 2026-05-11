@@ -12,7 +12,7 @@ use App\Http\Controllers\OwnerWithdrawalController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\CustomerController;
-
+use App\Http\Controllers\SaaSController;
 // Public Routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
@@ -21,10 +21,14 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::get('/ping', function () {
     return response()->json(['status' => 'online']);
 });
+Route::get('/plans', [SaaSController::class, 'getPlans']);
 
 // Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
     
+    
+    
+        Route::get('/my-subscription', [SaaSController::class, 'mySubscription']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });

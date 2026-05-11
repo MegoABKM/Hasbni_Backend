@@ -2,46 +2,30 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // <--- IMPORT THIS
-use App\Models\Supplier;          // 👈 إضافة 
-use App\Models\SupplierPayment;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Hash;
 
-
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable; // <--- ADD THIS TRAIT
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -50,7 +34,16 @@ class User extends Authenticatable
         ];
     }
 
-    // Relationships
+    // صلاحية دخول لوحة التحكم
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    // العلاقات (SaaS)
+    public function subscription() { return $this->hasOne(Subscription::class); }
+
+    // علاقات المتجر الخاصة بك
     public function profile() { return $this->hasOne(Profile::class); }
     public function products() { return $this->hasMany(Product::class); }
     public function employees() { return $this->hasMany(Employee::class); }
@@ -62,12 +55,9 @@ class User extends Authenticatable
     public function customers() { return $this->hasMany(Customer::class); }
     public function cashDrawers() { return $this->hasMany(CashDrawer::class); }
     public function cashTransactions() { return $this->hasMany(CashTransaction::class); }
-public function inventoryMovements() { return $this->hasMany(InventoryMovement::class); }
-
-    // أضف هذه السطرين داخل كلاس User مع بقية العلاقات
+    public function inventoryMovements() { return $this->hasMany(InventoryMovement::class); }
     public function partners() { return $this->hasMany(Partner::class); }
     public function partnershipRecords() { return $this->hasMany(PartnershipRecord::class); }
     public function suppliers() { return $this->hasMany(Supplier::class); }
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
-
-    }
+}
