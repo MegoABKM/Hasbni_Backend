@@ -5,6 +5,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Plan;
+use Carbon\Carbon;
 
 class EnforcePlanLimits
 {
@@ -13,8 +14,16 @@ class EnforcePlanLimits
         $user = $request->user();
         if (!$user) return $next($request);
 
-        $plan = $user->subscription ? $user->subscription->plan : Plan::where('name', 'Free')->first();
+        // الافتراضي هو الباقة المجانية
+        $plan = Plan::where('name', 'Free')->first();
         
+        // 🚨 التحقق الصارم: إذا كان الاشتراك موجوداً ولم يتجاوز تاريخ اليوم
+        if ($user->subscription && $user->subscription->ends_at && !Carbon::parse($user->subscription->ends_at)->isPast()) {
+            if ($user->subscription->status !== 'expired') {
+                $plan = $user->subscription->plan ?? $plan;
+            }
+        }
+
         if (!$plan) return $next($request);
 
         $features = is_string($plan->features) ? json_decode($plan->features, true) : $plan->features;

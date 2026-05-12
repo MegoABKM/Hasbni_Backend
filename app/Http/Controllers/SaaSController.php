@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class SaaSController extends Controller
 {
@@ -23,15 +24,17 @@ class SaaSController extends Controller
         $user = $request->user()->load('subscription.plan');
         $freePlan = Plan::where('name', 'Free')->first();
         
-        // التحقق من التاريخ
-        if ($user->subscription && $user->subscription->ends_at->isPast()) {
-            $user->subscription->update(['status' => 'expired']);
+        // 🚨 التحقق من التاريخ (استخدام Carbon للتأكد المطلق من تخطي الثانية الأخيرة في اليوم)
+        if ($user->subscription && $user->subscription->ends_at && Carbon::parse($user->subscription->ends_at)->isPast()) {
+            if ($user->subscription->status !== 'expired') {
+                $user->subscription->update(['status' => 'expired']);
+            }
         }
 
         if (!$user->subscription || $user->subscription->status === 'expired') {
             return response()->json([
                 'success' => true,
-                'is_expired' => true, // 👈 إشارة للتطبيق
+                'is_expired' => true, // 👈 إشارة للتطبيق بتجريد الصلاحيات
                 'plan' => $freePlan
             ]);
         }

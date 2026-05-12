@@ -11,11 +11,20 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-   ->withMiddleware(function (Middleware $middleware): void {
+    ->withMiddleware(function (Middleware $middleware): void {
+        
+        // 1. تسجيل الأسماء المختصرة للـ Middlewares
         $middleware->alias([
             'manager' => \App\Http\Middleware\EnsureManagerAccess::class,
-            'plan' => \App\Http\Middleware\EnforcePlanLimits::class, // <--- ADD THIS LINE
+            'plan' => \App\Http\Middleware\EnforcePlanLimits::class, 
+            'check.banned' => \App\Http\Middleware\CheckBannedUser::class, 
         ]);
+        
+        // 2. تطبيق فحص الحظر على كافة مسارات الـ API المحمية
+        $middleware->appendToGroup('api', [
+            \App\Http\Middleware\CheckBannedUser::class,
+        ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

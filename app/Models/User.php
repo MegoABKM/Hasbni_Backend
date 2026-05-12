@@ -8,42 +8,34 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-    ];
+    protected $fillable = ['name', 'email', 'password', 'role', 'is_banned']; // 👈 إضافة is_banned
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $hidden = ['password', 'remember_token'];
 
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+    protected function casts(): array {
+        return ['email_verified_at' => 'datetime', 'password' => 'hashed', 'is_banned' => 'boolean'];
     }
 
-    // صلاحية دخول لوحة التحكم
-    public function canAccessPanel(Panel $panel): bool
-    {
+    public function canAccessPanel(Panel $panel): bool {
         return $this->role === 'super_admin';
     }
 
-    // العلاقات (SaaS)
-    public function subscription() { return $this->hasOne(Subscription::class); }
+    // 🚀 العلاقات الخاصة بالاشتراكات (سجل وتاريخ) 🚀
+    public function subscriptions() { 
+        return $this->hasMany(Subscription::class)->latest(); // جلب كل السجل
+    }
+    
+    // الاشتراك الفعال حالياً
+    public function subscription() { 
+        return $this->hasOne(Subscription::class)->latestOfMany(); 
+    }
 
-    // علاقات المتجر الخاصة بك
+    // علاقات المتجر
     public function profile() { return $this->hasOne(Profile::class); }
     public function products() { return $this->hasMany(Product::class); }
     public function employees() { return $this->hasMany(Employee::class); }
@@ -60,4 +52,6 @@ class User extends Authenticatable implements FilamentUser
     public function partnershipRecords() { return $this->hasMany(PartnershipRecord::class); }
     public function suppliers() { return $this->hasMany(Supplier::class); }
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
+    
+    public function payments() { return $this->hasMany(Payment::class); }
 }
