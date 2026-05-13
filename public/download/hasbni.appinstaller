@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+    Uri="http://212.47.68.230:8099/downloads/hasbni.appinstaller"
+    Version="1.0.0.0"
+    xmlns="http://schemas.microsoft.com/appx/appinstaller/2018">
+    
+    <MainPackage
+        Name="com.hasbni.posapp"
+        Version="1.0.0.0"
+        Publisher="CN=Hasbni LLC"
+        Uri="http://212.47.68.230:8099/downloads/hasbni.msix" />
+
+    <UpdateSettings>
+        <OnLaunch
+            HoursBetweenUpdateChecks="0"
+            ShowPrompt="true"
+            UpdateBlocksActivation="false" />
+    </UpdateSettings>
+</AppInstaller>
