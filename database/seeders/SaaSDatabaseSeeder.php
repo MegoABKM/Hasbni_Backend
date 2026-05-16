@@ -11,6 +11,7 @@ class SaaSDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // 1. إنشاء حساب المدير العام
         User::updateOrCreate(
             ['email' => 'admin@bhasbni.com'],
             [
@@ -20,11 +21,15 @@ class SaaSDatabaseSeeder extends Seeder
             ]
         );
 
-        // 🚀 إضافة إعدادات التطبيق الافتراضية 🚀
+        // 2. 🚀 إعدادات التطبيق الافتراضية (هنا أضفنا رقم الواتساب) 🚀
         AppConfig::updateOrCreate(['key' => 'min_version'], ['value' => '1.0.0']);
         AppConfig::updateOrCreate(['key' => 'is_disabled'], ['value' => 'false']);
         AppConfig::updateOrCreate(['key' => 'update_url'], ['value' => 'https://play.google.com/store/apps/details?id=com.yourapp']);
+        
+        // 👇 السطر الجديد: ضع رقم صديقك في ألمانيا أو رقمك في لبنان كقيمة افتراضية
+        AppConfig::updateOrCreate(['key' => 'whatsapp_number'], ['value' => '96170123456']); 
 
+        // 3. خطط الاشتراك
         Plan::updateOrCreate(['name' => 'Free'], [
             'monthly_price' => 0.00, 'yearly_price' => 0.00, 'max_users' => 1, 'max_products' => 5,
             'features' => json_encode(['can_sync' => false, 'reports' => 'basic', 'partnership' => false, 'suppliers' => false]),

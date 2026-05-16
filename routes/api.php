@@ -27,14 +27,17 @@ Route::get('/ping', function () {
 Route::get('/plans', [SaaSController::class, 'getPlans']);
 
 // 🚀 تم نقل هذا المسار إلى هنا ليتمكن التطبيق من قراءته قبل تسجيل الدخول 🚀
+// مسار: routes/api.php
 Route::get('/app-status', function() {
     return response()->json([
         'min_version' => \App\Models\AppConfig::where('key', 'min_version')->value('value') ?? '1.0.0',
         'is_disabled' => \App\Models\AppConfig::where('key', 'is_disabled')->value('value') === 'true',
         'update_url' => \App\Models\AppConfig::where('key', 'update_url')->value('value') ?? 'https://bhasbni.com',
+        // 🚀 السطر الجديد: جلب رقم الواتساب
+        'whatsapp_number' => \App\Models\AppConfig::where('key', 'whatsapp_number')->value('value') ?? '', 
     ]);
 });
-
+Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class, 'handleStripe']);
 // ==========================================
 // 🔒 Protected Routes (الروابط المحمية بالتوكن)
 // ==========================================
@@ -103,4 +106,6 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync']);
     Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']);
+    
+    Route::post('/verify-google-play', [\App\Http\Controllers\GooglePlayController::class, 'verifyPurchase']);
 });
