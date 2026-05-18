@@ -31,8 +31,9 @@ class SaaSDatabaseSeeder extends Seeder
 
         // 3. خطط الاشتراك
         Plan::updateOrCreate(['name' => 'Free'], [
-            'monthly_price' => 0.00, 'yearly_price' => 0.00, 'max_users' => 1, 'max_products' => 5,
-            'features' => json_encode(['can_sync' => false, 'reports' => 'basic', 'partnership' => false, 'suppliers' => false]),
+            'monthly_price' => 0.00, 'yearly_price' => 0.00, 'max_users' => 1, 'max_products' => 50,
+            // 🚨 أضفنا support كـ false لكي تظهر مقفلة في التطبيق
+            'features' => json_encode(['can_sync' => false, 'reports' => 'basic', 'partnership' => false, 'suppliers' => false, 'support' => false]),
             'is_active' => true,
         ]);
 

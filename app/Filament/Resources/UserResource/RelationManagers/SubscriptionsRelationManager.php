@@ -4,20 +4,16 @@ namespace App\Filament\Resources\UserResource\RelationManagers;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Resources\RelationManagers\RelationManager;
-
-// 🚀 التعديل هنا: استخدام المسارات الصحيحة للـ Actions في إصدارك 🚀
-use Filament\Actions\CreateAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Schemas\Schema; 
 use App\Models\Plan;
+use Carbon\Carbon;
 
 class SubscriptionsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'subscription'; 
+    // 🚀 ربط العلاقة الصحيحة الموجودة في موديل User
+    protected static string $relationship = 'subscriptions'; 
     protected static ?string $recordTitleAttribute = 'status';
 
     public function form(Schema $schema): Schema
@@ -27,16 +23,53 @@ class SubscriptionsRelationManager extends RelationManager
                 ->label('Plan')
                 ->options(Plan::all()->pluck('name', 'id'))
                 ->required(),
+                
             Select::make('status')
                 ->options(['active' => 'Active', 'expired' => 'Expired', 'canceled' => 'Canceled'])
                 ->default('active')
                 ->required(),
+                
             Select::make('billing_cycle')
                 ->options(['monthly' => 'Monthly', 'yearly' => 'Yearly', 'lifetime' => 'Lifetime'])
                 ->default('monthly')
-                ->required(),
-            DatePicker::make('starts_at')->default(now())->required(),
-            DatePicker::make('ends_at')->required(),
+                ->required()
+                ->live() // 🚀 تفاعل لحظي
+                ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, ?string $state) {
+                    $startsAt = $get('starts_at');
+                    if (!$startsAt) return;
+
+                    $date = Carbon::parse($startsAt);
+
+                    if ($state === 'monthly') {
+                        $set('ends_at', $date->addMonth()->format('Y-m-d'));
+                    } elseif ($state === 'yearly') {
+                        $set('ends_at', $date->addYear()->format('Y-m-d'));
+                    } elseif ($state === 'lifetime') {
+                        $set('ends_at', null); // مدى الحياة
+                    }
+                }),
+
+            DatePicker::make('starts_at')
+                ->default(now())
+                ->required()
+                ->live() // 🚀 تفاعل لحظي عند تغيير تاريخ البدء
+                ->afterStateUpdated(function (\Filament\Forms\Get $get, \Filament\Forms\Set $set, ?string $state) {
+                    $cycle = $get('billing_cycle');
+                    if (!$state || !$cycle) return;
+
+                    $date = Carbon::parse($state);
+
+                    if ($cycle === 'monthly') {
+                        $set('ends_at', $date->addMonth()->format('Y-m-d'));
+                    } elseif ($cycle === 'yearly') {
+                        $set('ends_at', $date->addYear()->format('Y-m-d'));
+                    } elseif ($cycle === 'lifetime') {
+                        $set('ends_at', null);
+                    }
+                }),
+
+            DatePicker::make('ends_at')
+                ->required(fn (\Filament\Forms\Get $get) => $get('billing_cycle') !== 'lifetime'),
         ]);
     }
 
@@ -58,11 +91,12 @@ class SubscriptionsRelationManager extends RelationManager
                 TextColumn::make('ends_at')->date(),
             ])
             ->headerActions([ 
-                CreateAction::make()->label('Assign Plan') 
+                // 🚀 استدعاء المسار المباشر الإجباري 🚀
+                \Filament\Tables\Actions\CreateAction::make()->label('Assign Plan') 
             ])
             ->actions([ 
-                EditAction::make(), 
-                DeleteAction::make() 
+                \Filament\Tables\Actions\EditAction::make(), 
+                \Filament\Tables\Actions\DeleteAction::make() 
             ]);
     }
 }

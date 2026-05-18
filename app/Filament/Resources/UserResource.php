@@ -3,6 +3,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
 use App\Models\User;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -75,11 +76,11 @@ class UserResource extends Resource
             ->actions([ EditAction::make() ]); 
     }
 
-  public static function getRelations(): array
+public static function getRelations(): array
     {
         return [
-            // 👈 استخدام RelationManager هنا يعتمد على نوع العلاقة (hasOne) 
             SubscriptionsRelationManager::class,
+            PaymentsRelationManager::class,
         ];
     }
 
