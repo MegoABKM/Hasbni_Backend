@@ -56,4 +56,47 @@ class SaaSController extends Controller
         'plan' => $plan
     ]);
 }
+
+// جلب الإعلان النشط
+    public function getActiveAnnouncement()
+    {
+        $announcement = \App\Models\Announcement::where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->latest()
+            ->first();
+
+        return response()->json(['success' => true, 'data' => $announcement]);
+    }
+
+    // التحقق من الكوبون
+    public function validatePromoCode(\Illuminate\Http\Request $request)
+    {
+        $request->validate(['code' => 'required|string']);
+
+        $promo = \App\Models\PromoCode::where('code', strtoupper($request->code))->first();
+
+        if (!$promo) {
+            return response()->json(['success' => false, 'message' => 'الكوبون غير صحيح.'], 404);
+        }
+
+        if (!$promo->is_active) {
+            return response()->json(['success' => false, 'message' => 'الكوبون غير فعال.'], 400);
+        }
+
+        if ($promo->expires_at && $promo->expires_at->isPast()) {
+            return response()->json(['success' => false, 'message' => 'عذراً، انتهت صلاحية هذا الكوبون.'], 400);
+        }
+
+        if ($promo->max_uses && $promo->current_uses >= $promo->max_uses) {
+            return response()->json(['success' => false, 'message' => 'تم تجاوز الحد الأقصى لاستخدام هذا الكوبون.'], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'discount_percentage' => $promo->discount_percentage,
+            'message' => "تم تطبيق خصم {$promo->discount_percentage}% بنجاح!"
+        ]);
+    }
 }

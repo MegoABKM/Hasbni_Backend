@@ -1,54 +1,44 @@
 <?php
-
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
-use Filament\Forms;
-use Filament\Schemas\Schema;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Schemas\Schema; // 🚀 التوافق مع نسختك
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
-use Filament\Tables\Table;
+use Filament\Actions\CreateAction; // 🚀 الأكشنز الموحدة
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class PaymentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'payments';
-
-    protected static ?string $recordTitleAttribute = 'id';
+    protected static ?string $recordTitleAttribute = 'transaction_id';
 
     public function form(Schema $schema): Schema
     {
-        return $schema
-            ->schema([
-                Forms\Components\TextInput::make('amount')
-                    ->required()
-                    ->numeric()
-                    ->prefix('$'),
-                Forms\Components\TextInput::make('currency')
-                    ->default('USD')
-                    ->required(),
-                Forms\Components\Select::make('payment_method')
-                    ->options([
-                        'manual' => 'Manual (Cash/Transfer)', 
-                        'stripe' => 'Stripe', 
-                        'paypal' => 'PayPal', 
-                        'google_play' => 'Google Play'
-                    ])
-                    ->required(),
-                Forms\Components\Select::make('status')
-                    ->options([
-                        'successful' => 'Successful', 
-                        'failed' => 'Failed', 
-                        'refunded' => 'Refunded'
-                    ])
-                    ->required(),
-                Forms\Components\DateTimePicker::make('paid_at')->default(now()),
-            ]);
+        return $schema->schema([
+            TextInput::make('amount')->numeric()->prefix('$')->required(),
+            TextInput::make('currency')->default('USD')->required(),
+            Select::make('payment_method')
+                ->options(['manual' => 'Manual', 'stripe' => 'Stripe', 'paypal' => 'PayPal'])
+                ->default('manual')
+                ->required(),
+            Select::make('status')
+                ->options(['successful' => 'Successful', 'failed' => 'Failed', 'refunded' => 'Refunded'])
+                ->default('successful')
+                ->required(),
+            TextInput::make('transaction_id')->label('Transaction ID'),
+            DateTimePicker::make('paid_at')->default(now())->required(),
+        ]);
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('id')
+            ->recordTitleAttribute('transaction_id')
             ->columns([
                 TextColumn::make('amount')->money('usd')->sortable(),
                 TextColumn::make('payment_method')->badge()->color('gray'),
@@ -62,21 +52,12 @@ class PaymentsRelationManager extends RelationManager
                     }),
                 TextColumn::make('paid_at')->dateTime()->sortable(),
             ])
-            ->filters([
-                //
-            ])
             ->headerActions([
-                // 🚀 استدعاء الأزرار مباشرة من كلاس Tables 🚀
-                Tables\Actions\CreateAction::make()->label('Add Payment'),
+                CreateAction::make()->label('Add Payment'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                EditAction::make(),
+                DeleteAction::make(),
             ]);
     }
 }

@@ -25,7 +25,8 @@ Route::get('/ping', function () {
 });
 
 Route::get('/plans', [SaaSController::class, 'getPlans']);
-
+Route::get('/announcements/active', [SaaSController::class, 'getActiveAnnouncement']);
+Route::post('/promo-codes/validate', [SaaSController::class, 'validatePromoCode']);
 // 🚀 تم نقل هذا المسار إلى هنا ليتمكن التطبيق من قراءته قبل تسجيل الدخول 🚀
 // مسار: routes/api.php
 Route::get('/app-status', function() {
@@ -38,6 +39,17 @@ Route::get('/app-status', function() {
     ]);
 });
 Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class, 'handleStripe']);
+
+// مسار استقبال تأكيد الدفع (عام)
+Route::get('/webhooks/myfatoorah/callback', [\App\Http\Controllers\MyFatoorahController::class, 'callback']);
+
+// مسارات محمية (للمستخدم المسجل)
+Route::middleware('auth:sanctum')->group(function () {
+    // إنشاء رابط الدفع
+    Route::post('/pay/myfatoorah', [\App\Http\Controllers\MyFatoorahController::class, 'checkout']);
+    
+    // ... (باقي مساراتك القديمة هنا)
+});
 // ==========================================
 // 🔒 Protected Routes (الروابط المحمية بالتوكن)
 // ==========================================

@@ -13,6 +13,8 @@ use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
+
+// 🚀 مسار الأزرار الموحد والصحيح لنسختك
 use Filament\Actions\EditAction; 
 use Filament\Actions\DeleteAction; 
 
@@ -20,7 +22,7 @@ class AnnouncementResource extends Resource
 {
     protected static ?string $model = Announcement::class;
     
-    public static function getNavigationIcon(): string { 
+    public static function getNavigationIcon(): ?string { 
         return 'heroicon-o-megaphone'; 
     }
     
@@ -30,33 +32,30 @@ class AnnouncementResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('title')->required()->columnSpanFull(),
-            Textarea::make('message')->required()->columnSpanFull(),
+        // 🚀 استخدام components بدلاً من schema
+        return $schema->components([
+            TextInput::make('title')->required(),
+            Textarea::make('message')->required(),
             Select::make('type')->options([
-                'info' => '🔵 Info (Normal)',
-                'warning' => '🟠 Warning (Alert)',
-                'danger' => '🔴 Danger (Urgent/Maintenance)'
+                'info' => 'Info',
+                'warning' => 'Warning',
+                'danger' => 'Danger'
             ])->default('info')->required(),
-            DateTimePicker::make('expires_at')->label('Show Until (Expiry)'),
+            DateTimePicker::make('expires_at')->label('Expiry Date'),
             Toggle::make('is_active')->default(true),
         ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table->defaultSort('created_at', 'desc')
+        return $table
             ->columns([
                 TextColumn::make('title')->searchable(),
-                TextColumn::make('type')->badge()->color(fn (string $state): string => match ($state) {
-                    'danger' => 'danger',
-                    'warning' => 'warning',
-                    default => 'info',
-                }),
-                TextColumn::make('expires_at')->dateTime()->sortable(),
+                TextColumn::make('type')->badge(),
                 IconColumn::make('is_active')->boolean(),
             ])
-            ->actions([
+            // 🚀 التعديل السحري الذي سيحل مشكلة التحميل اللانهائي
+            ->recordActions([
                 EditAction::make(), 
                 DeleteAction::make()
             ]);

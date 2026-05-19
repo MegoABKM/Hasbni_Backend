@@ -20,6 +20,8 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Filament\Widgets\PlanStatsWidget; 
 use App\Filament\Widgets\RevenueChart;
+use App\Filament\Widgets\SystemOverviewWidget; // 🚀 أضف هذا السطر
+
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -42,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
+                SystemOverviewWidget::class,
                 PlanStatsWidget::class,
                 RevenueChart::class, 
             ])

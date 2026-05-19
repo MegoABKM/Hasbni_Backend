@@ -10,8 +10,8 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Actions\EditAction;
 use Filament\Tables\Table;
+use Filament\Actions\EditAction;
 
 class PlanResource extends Resource
 {
@@ -29,20 +29,19 @@ class PlanResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        // تم استبدال Form بـ Schema ليتوافق مع إصدارك، وتمت إزالة Section لتجنب أخطاء المسارات
-        return $schema
-            ->schema([
-                TextInput::make('name')->required(),
-                TextInput::make('monthly_price')->numeric()->prefix('$')->required(),
-                TextInput::make('yearly_price')->numeric()->prefix('$')->required(),
-                TextInput::make('discount_percentage')->numeric()->suffix('%')->default(0),
-                TextInput::make('max_users')->numeric()->required(),
-                TextInput::make('max_products')->numeric()->required(),
-                Toggle::make('is_active')->default(true),
-                KeyValue::make('features')
-                    ->keyLabel('Feature Name (e.g. can_sync)')
-                    ->valueLabel('Value (e.g. true, false, 5)'),
-            ]);
+        // 🚀 التصحيح الجذري
+        return $schema->components([
+            TextInput::make('name')->required(),
+            TextInput::make('monthly_price')->numeric()->prefix('$')->required(),
+            TextInput::make('yearly_price')->numeric()->prefix('$')->required(),
+            TextInput::make('discount_percentage')->numeric()->suffix('%')->default(0),
+            TextInput::make('max_users')->numeric()->required(),
+            TextInput::make('max_products')->numeric()->required(),
+            Toggle::make('is_active')->default(true),
+            KeyValue::make('features')
+                ->keyLabel('Feature Name')
+                ->valueLabel('Value'),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -55,7 +54,8 @@ class PlanResource extends Resource
                 TextColumn::make('max_users')->sortable(),
                 IconColumn::make('is_active')->boolean(),
             ])
-            ->actions([
+            // 🚀 التصحيح الجذري
+            ->recordActions([
                 EditAction::make(),
             ]);
     }

@@ -54,4 +54,8 @@ class User extends Authenticatable implements FilamentUser
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
     
     public function payments() { return $this->hasMany(Payment::class); }
+    public function auditLogs() { 
+        return $this->hasMany(AuditLog::class)->latest(); 
+    }
+    
 }
