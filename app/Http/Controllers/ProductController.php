@@ -33,10 +33,10 @@ class ProductController extends Controller
             'selling_price' => 'required|numeric',
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
+            'product_category_id' => 'nullable|integer', // 👈 Added
             'created_at' => 'nullable|date',
         ]);
 
-        // 🚨 Server-Side Deduplication
         $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
 
         if ($clientCreatedAt) {
@@ -66,6 +66,7 @@ class ProductController extends Controller
             'selling_price' => 'sometimes|numeric',
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
+            'product_category_id' => 'nullable|integer', // 👈 Added
         ]);
 
         $product->update($validated);

@@ -13,7 +13,7 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'role', 'is_banned']; // 👈 إضافة is_banned
+    protected $fillable = ['name', 'email', 'password', 'role', 'is_banned']; 
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -25,19 +25,12 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === 'super_admin';
     }
 
-    // 🚀 العلاقات الخاصة بالاشتراكات (سجل وتاريخ) 🚀
-    public function subscriptions() { 
-        return $this->hasMany(Subscription::class)->latest(); // جلب كل السجل
-    }
-    
-    // الاشتراك الفعال حالياً
-    public function subscription() { 
-        return $this->hasOne(Subscription::class)->latestOfMany(); 
-    }
+    public function subscriptions() { return $this->hasMany(Subscription::class)->latest(); }
+    public function subscription() { return $this->hasOne(Subscription::class)->latestOfMany(); }
 
-    // علاقات المتجر
     public function profile() { return $this->hasOne(Profile::class); }
     public function products() { return $this->hasMany(Product::class); }
+    public function productCategories() { return $this->hasMany(ProductCategory::class); } // 👈 Added
     public function employees() { return $this->hasMany(Employee::class); }
     public function expenses() { return $this->hasMany(Expense::class); }
     public function expenseCategories() { return $this->hasMany(ExpenseCategory::class); }
@@ -54,8 +47,5 @@ class User extends Authenticatable implements FilamentUser
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
     
     public function payments() { return $this->hasMany(Payment::class); }
-    public function auditLogs() { 
-        return $this->hasMany(AuditLog::class)->latest(); 
-    }
-    
+    public function auditLogs() { return $this->hasMany(AuditLog::class)->latest(); }
 }

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,19 +7,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Product extends Model {
     use SoftDeletes ,  \App\Traits\Auditable; 
     
-    // 👈 تم التعديل: إضافة جميع الحقول المسموح تعديلها (Mass Assignment)
- protected $fillable = [
+    protected $fillable = [
         'name',
         'barcode',
         'quantity',
         'alert_threshold', 
         'cost_price',
         'selling_price',
-        'last_purchase_price', // 👈 إضافة هنا
+        'last_purchase_price', 
         'user_id' , 
-        'partner_id'
+        'partner_id',
+        'product_category_id' // 👈 Added
     ];
 
     public function movements() { return $this->hasMany(InventoryMovement::class); }
     
+    public function category() { return $this->belongsTo(ProductCategory::class, 'product_category_id'); } // 👈 Added
 }

@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('hasbni-super-secure-panel-99')
             ->login()
             ->colors([
                 'primary' => Color::Amber,

@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        
+          $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         // 1. تسجيل الأسماء المختصرة للـ Middlewares
         $middleware->alias([
             'manager' => \App\Http\Middleware\EnsureManagerAccess::class,
@@ -24,7 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', [
             \App\Http\Middleware\CheckBannedUser::class,
         ]);
-        
+         $middleware->api(append: [
+    \App\Http\Middleware\SanitizeInput::class,
+]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

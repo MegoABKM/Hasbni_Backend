@@ -8,18 +8,15 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ProductCategoryController; // 👈 Added
 use App\Http\Controllers\OwnerWithdrawalController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SaaSController;
 
-// ==========================================
-// 🔓 Public Routes (الروابط المتاحة للجميع)
-// ==========================================
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
 Route::get('/ping', function () {
     return response()->json(['status' => 'online']);
 });
@@ -27,46 +24,27 @@ Route::get('/ping', function () {
 Route::get('/plans', [SaaSController::class, 'getPlans']);
 Route::get('/announcements/active', [SaaSController::class, 'getActiveAnnouncement']);
 Route::post('/promo-codes/validate', [SaaSController::class, 'validatePromoCode']);
-// 🚀 تم نقل هذا المسار إلى هنا ليتمكن التطبيق من قراءته قبل تسجيل الدخول 🚀
-// مسار: routes/api.php
+
 Route::get('/app-status', function() {
     return response()->json([
         'min_version' => \App\Models\AppConfig::where('key', 'min_version')->value('value') ?? '1.0.0',
         'is_disabled' => \App\Models\AppConfig::where('key', 'is_disabled')->value('value') === 'true',
         'update_url' => \App\Models\AppConfig::where('key', 'update_url')->value('value') ?? 'https://bhasbni.com',
-        // 🚀 السطر الجديد: جلب رقم الواتساب
         'whatsapp_number' => \App\Models\AppConfig::where('key', 'whatsapp_number')->value('value') ?? '', 
     ]);
 });
 Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class, 'handleStripe']);
-
-// مسار استقبال تأكيد الدفع (عام)
 Route::get('/webhooks/myfatoorah/callback', [\App\Http\Controllers\MyFatoorahController::class, 'callback']);
 
-// مسارات محمية (للمستخدم المسجل)
 Route::middleware('auth:sanctum')->group(function () {
-    // إنشاء رابط الدفع
     Route::post('/pay/myfatoorah', [\App\Http\Controllers\MyFatoorahController::class, 'checkout']);
-    
-    // ... (باقي مساراتك القديمة هنا)
-});
-// ==========================================
-// 🔒 Protected Routes (الروابط المحمية بالتوكن)
-// ==========================================
-Route::middleware('auth:sanctum')->group(function () {
-    
     Route::get('/my-subscription', [SaaSController::class, 'mySubscription']);
-    
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', function (Request $request) { return $request->user(); });
 
     Route::get('/inventory/movements', [\App\Http\Controllers\InventoryController::class, 'index']);
     Route::post('/inventory/movements/sync', [\App\Http\Controllers\InventoryController::class, 'syncMovements']);
-    
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Partnership Routes
     Route::get('/partnership/pull', [\App\Http\Controllers\PartnershipController::class, 'pull']);
     Route::post('/partnership/partner', [\App\Http\Controllers\PartnershipController::class, 'syncPartner']);
     Route::put('/partnership/partner/{id}', [\App\Http\Controllers\PartnershipController::class, 'updatePartner']);
@@ -77,7 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/partnership/record', [\App\Http\Controllers\PartnershipController::class, 'syncRecord']);
     Route::delete('/partnership/record-item/{id}', [\App\Http\Controllers\PartnershipController::class, 'deleteRecordItem']);
     
-    // Profile
     Route::get('/profiles', [ProfileController::class, 'show']); 
     Route::post('/profiles', [ProfileController::class, 'update']);
     Route::post('/rpc/set_manager_password', [ProfileController::class, 'setManagerPassword']);
@@ -87,27 +64,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/customers/{id}/payments', [CustomerController::class, 'storePayment']);
     Route::get('/customer_payments', [CustomerController::class, 'getPayments']);
 
-    // Employees & Expenses
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('expense_categories', ExpenseCategoryController::class);
+    Route::apiResource('product_categories', ProductCategoryController::class); // 👈 Added
 
-    // Sales RPC
     Route::post('/rpc/get_sale_details', fn(Request $r) => app(SaleController::class)->show($r, $r->p_sale_id));
     Route::post('/rpc/process_return', [SaleController::class, 'processReturn']);
     Route::post('/rpc/process_exchange', [SaleController::class, 'processExchange']);
     
-    // POS Core
     Route::apiResource('products', ProductController::class)->only(['index']);
     Route::get('/sales', [SaleController::class, 'index']);
-    Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store']);
+   Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store'])->middleware('throttle:financial_operations');
     Route::apiResource('customers', CustomerController::class);
     
-    // Suppliers
     Route::apiResource('suppliers', App\Http\Controllers\SupplierController::class);
     Route::post('/suppliers/{id}/payments', [App\Http\Controllers\SupplierController::class, 'storePayment']);
     Route::get('/supplier_payments', [App\Http\Controllers\SupplierController::class, 'getPayments']);
     
-    // 🚨 الروابط المحمية (للمدير فقط) 🚨
     Route::middleware(['manager'])->group(function () {
         Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index']);
         Route::apiResource('products', ProductController::class)->except(['index']);
@@ -116,7 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
     });
     
-    Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync']);
+    Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync'])->middleware('throttle:financial_operations');
     Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']);
     
     Route::post('/verify-google-play', [\App\Http\Controllers\GooglePlayController::class, 'verifyPurchase']);
