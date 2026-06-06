@@ -17,6 +17,10 @@ use App\Http\Controllers\SaaSController;
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:5,1');
+Route::post('/verify-email-registration', [AuthController::class, 'verifyEmailRegistration']);
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
 Route::get('/ping', function () {
     return response()->json(['status' => 'online']);
 });

@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter; // 👈 استيراد الفلاتر
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
@@ -47,6 +48,12 @@ class UserResource extends Resource
         return $schema->schema([
             TextInput::make('name')->required(),
             TextInput::make('email')->email()->required(),
+            
+            // 🚀 الحقول الجديدة في واجهة الإدارة
+            TextInput::make('phone')->label('Phone Number'),
+            TextInput::make('country')->label('Country'),
+            TextInput::make('business_type')->label('Business Type'),
+
             TextInput::make('password')
                 ->password()
                 ->dehydrateStateUsing(fn ($state) => Hash::make($state))
@@ -64,11 +71,11 @@ class UserResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
-                    ->sortable(), // 👈 يجعله قابلاً للترتيب
+                    ->sortable(),
 
                 TextColumn::make('email')
                     ->searchable()
-                    ->sortable(), // 👈 يجعله قابلاً للترتيب
+                    ->sortable(),
                 
                 TextColumn::make('role')
                     ->badge()
@@ -78,7 +85,19 @@ class UserResource extends Resource
                     ->boolean()
                     ->label('Banned')
                     ->sortable(),
-                
+                    
+                // 🚀 الأعمدة الجديدة
+                TextColumn::make('country')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
+
+                TextColumn::make('business_type')
+                    ->label('Industry')
+                    ->searchable()
+                    ->toggleable(),
+                    
                 // 🚀 عمود ثقل البيانات مع ترتيب SQL مخصص
                 TextColumn::make('data_weight')
                     ->label('DB Weight (Records)')
@@ -112,6 +131,16 @@ class UserResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => $state === 'Free' ? 'gray' : 'success')
                     ->sortable(),
+            ])
+            ->filters([
+                // 🚀 الفلاتر الجديدة لتحليل العملاء حسب الدولة ونوع التجارة
+                SelectFilter::make('country')
+                    ->options(fn () => User::pluck('country', 'country')->filter()->unique()->toArray())
+                    ->label('Filter by Country'),
+
+                SelectFilter::make('business_type')
+                    ->options(fn () => User::pluck('business_type', 'business_type')->filter()->unique()->toArray())
+                    ->label('Filter by Industry'),
             ])
             ->recordActions([
                 // زر الانتقال إلى لوحة بيانات العميل
