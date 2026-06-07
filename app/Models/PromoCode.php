@@ -8,4 +8,10 @@ class PromoCode extends Model {
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+    
+    
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 }

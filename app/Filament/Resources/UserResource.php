@@ -1,13 +1,18 @@
 <?php
+
 namespace App\Filament\Resources;
 
+use Illuminate\Support\Facades\DB; // 👈 استيراد DB مطلوب لعملية المسح
+use App\Models\AuditLog;
+use App\Models\User;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\ProductsRelationManager; 
 use App\Filament\Resources\UserResource\RelationManagers\SalesRelationManager; 
 use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager; 
-use App\Models\User;
+use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager; // 👈 استيراد إدارة الأجهزة
+
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
@@ -15,13 +20,14 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\SelectFilter; // 👈 استيراد الفلاتر
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action; 
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Notifications\Notification; // 👈 استيراد الإشعارات لرسالة النجاح
 
 class UserResource extends Resource
 {
@@ -162,6 +168,52 @@ class UserResource extends Resource
                     ->modalDescription('Delete all access tokens? They will be logged out from all devices immediately.')
                     ->action(fn (User $record) => $record->tokens()->delete()),
 
+                // 🚀 زر تصفير بيانات العميل (Soft Reset) 🚀
+                Action::make('wipe_data')
+                    ->label('Soft Reset')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Wipe Operational Data?')
+                    ->modalDescription('⚠️ Warning: This will permanently delete ALL Sales, Products, Expenses, Customers, and Cash records for this user. Their Subscription, Payments, and Profile will remain intact. This action CANNOT be undone.')
+                    ->modalSubmitActionLabel('Yes, Wipe Everything')
+                    ->action(function (User $record) {
+                        
+                        DB::transaction(function () use ($record) {
+                            // مسح البيانات التشغيلية (تعتمد على Cascade Deletes في حال وجود علاقات)
+                            $record->sales()->delete();
+                            $record->products()->delete();
+                            $record->expenses()->delete();
+                            $record->withdrawals()->delete();
+                            $record->customers()->delete();
+                            $record->suppliers()->delete();
+                            $record->partners()->delete();
+                            $record->partnershipRecords()->delete();
+                            $record->cashTransactions()->delete();
+                            $record->cashDrawers()->delete();
+                            $record->employees()->delete();
+                            $record->productCategories()->delete();
+                            $record->expenseCategories()->delete();
+                            $record->inventoryMovements()->delete();
+
+                            // 🛡️ أمان: تسجيل هذه العملية الخطيرة في الـ Audit Log لتعرف من قام بمسح بيانات العميل
+                            AuditLog::create([
+                                'user_id' => auth()->id(), // الأدمن الذي قام بالعملية
+                                'event' => 'tenant_wiped',
+                                'auditable_type' => User::class,
+                                'auditable_id' => $record->id,
+                                'new_values' => json_encode(['action' => 'Admin executed a Soft Reset (Wipe Data).']),
+                                'ip_address' => request()->ip(),
+                                'user_agent' => request()->userAgent(),
+                            ]);
+                        });
+
+                        Notification::make()
+                            ->title('Tenant operational data wiped successfully.')
+                            ->success()
+                            ->send();
+                    }),
+
                 // توليد ملف .SQL للعميل
                 Action::make('export_sql')
                     ->label('Export SQL')
@@ -213,6 +265,7 @@ class UserResource extends Resource
         return [
             SubscriptionsRelationManager::class,
             PaymentsRelationManager::class,
+            TokensRelationManager::class,    // 🚀 تم دمج الـ Relation Manager للأجهزة
             ProductsRelationManager::class, 
             SalesRelationManager::class,    
             AuditLogsRelationManager::class,

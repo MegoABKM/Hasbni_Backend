@@ -21,4 +21,8 @@ class Payment extends Model
     {
         return $this->belongsTo(Subscription::class);
     }
+    public function promoCode()
+    {
+        return $this->belongsTo(PromoCode::class);
+    }
 }

@@ -52,9 +52,23 @@ class WebhookController extends Controller
             );
 
             // 2. تسجيل الفاتورة لتظهر لك في لوحة تحكم Filament
+            
+            $promoCodeStr = $session['customer_details']['discount']['coupon']['name'] ?? null; // حسب طريقة تمريرك له في Stripe
+$promoCodeId = null;
+
+if ($promoCodeStr) {
+    $promo = PromoCode::where('code', $promoCodeStr)->first();
+    if ($promo) {
+        $promoCodeId = $promo->id;
+        // زيادة عدد الاستخدامات
+        $promo->increment('current_uses');
+    }
+}
+
             Payment::create([
                 'user_id' => $user->id,
                 'subscription_id' => $user->subscription->id ?? null,
+                'promo_code_id' => $promoCodeId,
                 'amount' => $amountPaid,
                 'currency' => strtoupper($session['currency']),
                 'payment_method' => 'stripe',

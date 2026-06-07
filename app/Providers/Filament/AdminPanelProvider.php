@@ -18,10 +18,12 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+// 🚀 الاستيرادات الخاصة بالويدجتس (Widgets)
 use App\Filament\Widgets\PlanStatsWidget; 
 use App\Filament\Widgets\RevenueChart;
-use App\Filament\Widgets\SystemOverviewWidget; // 🚀 أضف هذا السطر
-
+use App\Filament\Widgets\SystemOverviewWidget;
+use App\Filament\Widgets\SaaSMetricsWidget; // 👈 هذا هو السطر الذي كان مفقوداً
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -45,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
                 FilamentInfoWidget::class,
                 SystemOverviewWidget::class,
+                SaaSMetricsWidget::class, // 👈 الويدجت الجديد للتحليلات
                 PlanStatsWidget::class,
                 RevenueChart::class, 
             ])

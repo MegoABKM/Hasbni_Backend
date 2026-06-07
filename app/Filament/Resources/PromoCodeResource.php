@@ -12,6 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Illuminate\Database\Eloquent\Builder;
 
 class PromoCodeResource extends Resource
 {
@@ -34,10 +35,28 @@ class PromoCodeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->withSum(['payments' => fn($q) => $q->where('status', 'successful')], 'amount'))
             ->columns([
-                TextColumn::make('code')->searchable()->badge(),
-                TextColumn::make('discount_percentage')->suffix('%'),
-                TextColumn::make('current_uses')->label('Used'),
+                TextColumn::make('code')->searchable()->badge()->color('primary'),
+                TextColumn::make('discount_percentage')->suffix('%')->sortable(),
+                
+                // الاستخدامات الفعلية (التي نتج عنها دفع)
+                TextColumn::make('payments_count')
+                    ->counts('payments')
+                    ->label('Paid Uses')
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
+
+                // 🚀 حجم المبيعات التي جلبها هذا الكوبون (ROI)
+                TextColumn::make('payments_sum_amount')
+                    ->label('Generated Revenue (ROI)')
+                    ->money('usd')
+                    ->sortable()
+                    ->badge()
+                    ->color('success'),
+
+                TextColumn::make('is_active')->badge()->color(fn ($state) => $state ? 'success' : 'danger')->formatStateUsing(fn ($state) => $state ? 'Active' : 'Inactive'),
             ])
             ->recordActions([
                 EditAction::make(),
