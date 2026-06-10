@@ -7,17 +7,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Product extends Model {
     use SoftDeletes ,  \App\Traits\Auditable; 
     
-    protected $fillable = [
-        'name',
-        'barcode',
-        'quantity',
-        'alert_threshold', 
-        'cost_price',
-        'selling_price',
-        'last_purchase_price', 
-        'user_id' , 
-        'partner_id',
-        'product_category_id' // 👈 Added
+   protected $fillable = [
+        'name', 'barcode', 'quantity', 'alert_threshold', 'cost_price', 'selling_price', 'last_purchase_price', 'partner_id', 'product_category_id', 'supplier_id', 'user_id'
     ];
 
     public function movements() { return $this->hasMany(InventoryMovement::class); }

@@ -33,7 +33,8 @@ class ProductController extends Controller
             'selling_price' => 'required|numeric',
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
-            'product_category_id' => 'nullable|integer', // 👈 Added
+            'product_category_id' => 'nullable|integer',
+            'supplier_id' => 'nullable|integer', // 🚀 Added
             'created_at' => 'nullable|date',
         ]);
 
@@ -66,7 +67,8 @@ class ProductController extends Controller
             'selling_price' => 'sometimes|numeric',
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
-            'product_category_id' => 'nullable|integer', // 👈 Added
+            'product_category_id' => 'nullable|integer',
+            'supplier_id' => 'nullable|integer', // 🚀 Added
         ]);
 
         $product->update($validated);
