@@ -78,9 +78,10 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    // c:\Users\LEGION\bhasbni\config\app.php
+// c:\Users\LEGION\bhasbni\config\app.php
 
-    'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'ar'), // 👈 تم تغييره إلى 'ar' كافتراضي
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 

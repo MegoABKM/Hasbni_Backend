@@ -33,7 +33,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function profile() { return $this->hasOne(Profile::class); }
     public function products() { return $this->hasMany(Product::class); }
-    public function productCategories() { return $this->hasMany(ProductCategory::class); } // 👈 Added
+    public function productCategories() { return $this->hasMany(ProductCategory::class); } 
     public function employees() { return $this->hasMany(Employee::class); }
     public function expenses() { return $this->hasMany(Expense::class); }
     public function expenseCategories() { return $this->hasMany(ExpenseCategory::class); }
@@ -48,7 +48,9 @@ class User extends Authenticatable implements FilamentUser
     public function partnershipRecords() { return $this->hasMany(PartnershipRecord::class); }
     public function suppliers() { return $this->hasMany(Supplier::class); }
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
-    
     public function payments() { return $this->hasMany(Payment::class); }
     public function auditLogs() { return $this->hasMany(AuditLog::class)->latest(); }
+    
+    // 👈 السطر الجديد الخاص بالدعم الفني
+    public function supportTickets() { return $this->hasMany(SupportTicket::class)->latest(); }
 }

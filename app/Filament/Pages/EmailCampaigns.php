@@ -5,7 +5,7 @@ use Filament\Pages\Page;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\RichEditor;
-use Filament\Schemas\Schema; // 🚀 الاعتماد على Schema بدلاً من Form
+use Filament\Schemas\Schema; // ✅
 use Filament\Forms\Contracts\HasForms; 
 use Filament\Forms\Concerns\InteractsWithForms; 
 use Filament\Actions\Action;
@@ -26,12 +26,12 @@ class EmailCampaigns extends Page implements HasForms
 
     public static function getNavigationGroup(): ?string
     {
-        return 'SaaS Management';
+        return __('SaaS Management'); // 👈 ترجمة
     }
 
-    public function getTitle(): string
+   public function getTitle(): string
     {
-        return 'Email Campaigns (التسويق)';
+        return __('Email Campaigns'); // 👈 ترجمة
     }
 
     public ?array $data = [];
@@ -41,35 +41,34 @@ class EmailCampaigns extends Page implements HasForms
         $this->form->fill();
     }
 
-    // 🚀 تغيير توقيع الدالة من Form إلى Schema ليتوافق مع نسختك 🚀
-    public function form(Schema $schema): Schema
+    public function form(Schema $schema): Schema // ✅
     {
         return $schema
-            ->components([ // 🚀 استخدام components بدلاً من schema
+            ->components([ // ✅
                 Select::make('target_audience')
-                    ->label('Target Audience (الجمهور المستهدف)')
-                    ->options([
-                        'all' => 'All Users (جميع المستخدمين)',
-                        'free' => 'Free Plan Users (مستخدمي الباقة المجانية)',
-                        'pro' => 'Pro & Enterprise Users (المشتركين المدفوعين)',
-                        'country' => 'Specific Country (دولة محددة)',
+                          ->label(__('Target Audience')) // 👈 ترجمة
+                      ->options([
+                        'all' => __('All Users'),
+                        'free' => __('Free Plan Users'),
+                        'pro' => __('Paid Subscribers'),
+                        'country' => __('Specific Country'),
                     ])
                     ->live()
                     ->required(),
 
                 Select::make('target_country')
-                    ->label('Select Country')
+                          ->label(__('Select Country'))
                     ->options(User::pluck('country', 'country')->filter()->unique()->toArray())
                     ->visible(fn ($get) => $get('target_audience') === 'country')
                     ->required(fn ($get) => $get('target_audience') === 'country'),
 
                 TextInput::make('subject')
-                    ->label('Email Subject (عنوان الرسالة)')
+                  ->label(__('Email Subject'))
                     ->required()
                     ->maxLength(255),
 
                 RichEditor::make('body')
-                    ->label('Email Body (محتوى الرسالة)')
+                    ->label(__('Email Body'))
                     ->required()
                     ->columnSpanFull(),
             ])
@@ -112,7 +111,6 @@ class EmailCampaigns extends Page implements HasForms
         $this->form->fill();
     }
 
-    // زر الإرسال المدمج
     protected function getFormActions(): array
     {
         return [

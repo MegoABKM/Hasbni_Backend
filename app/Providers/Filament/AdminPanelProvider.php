@@ -64,6 +64,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+              ->renderHook(
+                \Filament\View\PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn (): string => \Illuminate\Support\Facades\Blade::render('@include("filament.language-switch")')
+            );
     }
 }

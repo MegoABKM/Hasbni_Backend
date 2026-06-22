@@ -1,0 +1,59 @@
+{
+    "SaaS Management": "إدارة النظام",
+    "System Settings": "إعدادات النظام",
+    "Billing & Revenue": "الفواتير والإيرادات",
+    "Support & Help": "الدعم والمساعدة",
+    
+    "Email Campaigns": "الحملات البريدية",
+    "Target Audience": "الجمهور المستهدف",
+    "All Users": "جميع المستخدمين",
+    "Free Plan Users": "مستخدمي الباقة المجانية",
+    "Paid Subscribers": "المشتركين المدفوعين",
+    "Specific Country": "دولة محددة",
+    "Select Country": "اختر الدولة",
+    "Email Subject": "عنوان الرسالة",
+    "Email Body": "محتوى الرسالة",
+    "Send Campaign": "إرسال الحملة",
+
+    "Global Settings": "الإعدادات العامة",
+    "Firebase Credentials File": "ملف JSON للإشعارات (Firebase)",
+    "WhatsApp Support Number": "رقم واتساب الدعم",
+    "Minimum App Version": "إصدار الإجبار على التحديث",
+    "Update URL": "رابط التحديث",
+    "Maintenance Mode": "وضع الصيانة",
+
+    "Push Notifications": "إرسال إشعارات",
+    "Notification Title": "عنوان الإشعار",
+    "Notification Body": "نص الإشعار",
+
+    "SaaS Backups": "النسخ الاحتياطي الشامل",
+    "System Logs": "عارض الأخطاء",
+
+    "Users": "العملاء والمتاجر",
+    "Plans": "باقات الاشتراك",
+    "Subscriptions": "الاشتراكات",
+    "Payments": "المدفوعات",
+    "Promo Codes": "أكواد الخصم",
+    "Announcements": "الإعلانات",
+
+    "Name": "الاسم",
+    "Email": "البريد الإلكتروني",
+    "Phone Number": "رقم الهاتف",
+    "Country": "الدولة",
+    "Business Type": "نوع النشاط",
+    "Password": "كلمة المرور",
+    "Role": "الصلاحية",
+    "Ban User": "حظر المستخدم",
+
+    "Active": "نشط",
+    "Expired": "منتهي",
+    "Canceled": "ملغى",
+    "Successful": "ناجح",
+    "Failed": "فاشل",
+    "Refunded": "مسترد",
+    
+    "Dashboard": "لوحة القيادة",
+    "Tenant Data": "بيانات العميل",
+    "Force Logout": "إنهاء الجلسات",
+    "Soft Reset": "تصفير البيانات"
+}

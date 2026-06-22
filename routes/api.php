@@ -8,12 +8,13 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\ProductCategoryController; // 👈 Added
+use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\OwnerWithdrawalController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SaaSController;
+use App\Http\Controllers\SupportController; // 👈 استيراد متحكم الدعم
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
@@ -29,6 +30,10 @@ Route::get('/plans', [SaaSController::class, 'getPlans']);
 Route::get('/announcements/active', [SaaSController::class, 'getActiveAnnouncement']);
 Route::post('/promo-codes/validate', [SaaSController::class, 'validatePromoCode']);
 
+// 👈 مسارات الدعم (العامة)
+Route::get('/support/faqs', [SupportController::class, 'faqs']);
+Route::get('/support/instructions', [SupportController::class, 'instructions']);
+
 Route::get('/app-status', function() {
     return response()->json([
         'min_version' => \App\Models\AppConfig::where('key', 'min_version')->value('value') ?? '1.0.0',
@@ -41,6 +46,10 @@ Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class,
 Route::get('/webhooks/myfatoorah/callback', [\App\Http\Controllers\MyFatoorahController::class, 'callback']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    
+    // 👈 مسارات التذاكر (المحمية)
+    Route::get('/support/tickets', [SupportController::class, 'myTickets']);
+    Route::post('/support/tickets', [SupportController::class, 'createTicket'])->middleware('throttle:3,1'); // حماية من السبام
     
     Route::post('/fcm-token', [\App\Http\Controllers\FcmController::class, 'updateToken']);
     Route::post('/pay/myfatoorah', [\App\Http\Controllers\MyFatoorahController::class, 'checkout']);
@@ -72,7 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('expense_categories', ExpenseCategoryController::class);
-    Route::apiResource('product_categories', ProductCategoryController::class); // 👈 Added
+    Route::apiResource('product_categories', ProductCategoryController::class); 
 
     Route::post('/rpc/get_sale_details', fn(Request $r) => app(SaleController::class)->show($r, $r->p_sale_id));
     Route::post('/rpc/process_return', [SaleController::class, 'processReturn']);
@@ -80,7 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     
     Route::apiResource('products', ProductController::class)->only(['index']);
     Route::get('/sales', [SaleController::class, 'index']);
-   Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store'])->middleware('throttle:financial_operations');
+    Route::post('/rpc/create_sale_and_update_inventory', [SaleController::class, 'store'])->middleware('throttle:financial_operations');
     Route::apiResource('customers', CustomerController::class);
     
     Route::apiResource('suppliers', App\Http\Controllers\SupplierController::class);
@@ -94,8 +103,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
         Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
     });
-    
-    
     
     Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync'])->middleware('throttle:financial_operations');
     Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']);

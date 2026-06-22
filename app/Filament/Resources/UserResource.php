@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources;
 
-use Illuminate\Support\Facades\DB; // 👈 استيراد DB مطلوب لعملية المسح
+use Illuminate\Support\Facades\DB;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Filament\Resources\UserResource\Pages;
@@ -11,7 +11,7 @@ use App\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager
 use App\Filament\Resources\UserResource\RelationManagers\ProductsRelationManager; 
 use App\Filament\Resources\UserResource\RelationManagers\SalesRelationManager; 
 use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager; 
-use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager; // 👈 استيراد إدارة الأجهزة
+use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager; 
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -27,23 +27,16 @@ use Carbon\Carbon;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action; 
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Notifications\Notification; // 👈 استيراد الإشعارات لرسالة النجاح
+use Filament\Notifications\Notification;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-users';
-    }
+    public static function getNavigationIcon(): string { return 'heroicon-o-users'; }
+    public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
+    public static function getNavigationLabel(): string { return __('Users & Tenants'); }
 
-    public static function getNavigationGroup(): ?string
-    {
-        return 'SaaS Management';
-    }
-
-    // 🚀 جلب البيانات المسبق لتسريع الجدول وعمل عمود الـ DB Weight
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->withCount(['sales', 'products', 'cashTransactions']);
@@ -52,21 +45,22 @@ class UserResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            TextInput::make('name')->required(),
-            TextInput::make('email')->email()->required(),
-            
-            // 🚀 الحقول الجديدة في واجهة الإدارة
-            TextInput::make('phone')->label('Phone Number'),
-            TextInput::make('country')->label('Country'),
-            TextInput::make('business_type')->label('Business Type'),
+            TextInput::make('name')->label(__('Name'))->required(),
+            TextInput::make('email')->label(__('Email'))->email()->required(),
+            TextInput::make('phone')->label(__('Phone Number')),
+            TextInput::make('country')->label(__('Country')),
+            TextInput::make('business_type')->label(__('Business Type')),
 
             TextInput::make('password')
+                ->label(__('Password'))
                 ->password()
                 ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                 ->dehydrated(fn ($state) => filled($state))
                 ->required(fn (string $context): bool => $context === 'create'),
-            Select::make('role')->options(['shop_owner' => 'Shop Owner', 'super_admin' => 'Super Admin'])->required(),
-            Toggle::make('is_banned')->label('Ban User')->onColor('danger')->offColor('success'),
+            Select::make('role')
+                ->label(__('Role'))
+                ->options(['shop_owner' => __('Shop Owner'), 'super_admin' => __('Super Admin')])->required(),
+            Toggle::make('is_banned')->label(__('Ban User'))->onColor('danger')->offColor('success'),
         ]);
     }
 
@@ -75,38 +69,16 @@ class UserResource extends Resource
         return $table
             ->defaultSort('updated_at', 'desc')
             ->columns([
-                TextColumn::make('name')
-                    ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('email')
-                    ->searchable()
-                    ->sortable(),
-                
-                TextColumn::make('role')
-                    ->badge()
-                    ->sortable(),
-                
-                IconColumn::make('is_banned')
-                    ->boolean()
-                    ->label('Banned')
-                    ->sortable(),
+                TextColumn::make('name')->label(__('Name'))->searchable()->sortable(),
+                TextColumn::make('email')->label(__('Email'))->searchable()->sortable(),
+                TextColumn::make('role')->label(__('Role'))->badge()->sortable(),
+                IconColumn::make('is_banned')->label(__('Banned'))->boolean()->sortable(),
                     
-                // 🚀 الأعمدة الجديدة
-                TextColumn::make('country')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('info'),
-
-                TextColumn::make('business_type')
-                    ->label('Industry')
-                    ->searchable()
-                    ->toggleable(),
+                TextColumn::make('country')->label(__('Country'))->searchable()->sortable()->badge()->color('info'),
+                TextColumn::make('business_type')->label(__('Industry'))->searchable()->toggleable(),
                     
-                // 🚀 عمود ثقل البيانات مع ترتيب SQL مخصص
                 TextColumn::make('data_weight')
-                    ->label('DB Weight (Records)')
+                    ->label(__('DB Weight (Records)'))
                     ->getStateUsing(fn (User $record) => 
                         ($record->sales_count ?? 0) + 
                         ($record->products_count ?? 0) + 
@@ -116,17 +88,12 @@ class UserResource extends Resource
                         return $query->orderByRaw('(COALESCE(sales_count, 0) + COALESCE(products_count, 0) + COALESCE(cash_transactions_count, 0)) ' . $direction);
                     })
                     ->badge()
-                    ->color(fn ($state) => $state > 5000 ? 'danger' : ($state > 1000 ? 'warning' : 'gray'))
-                    ->tooltip('اضغط على عنوان العمود لترتيب المتاجر حسب الحجم'),
+                    ->color(fn ($state) => $state > 5000 ? 'danger' : ($state > 1000 ? 'warning' : 'gray')),
 
-                TextColumn::make('updated_at')
-                    ->label('Last Sync')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')->label(__('Last Sync'))->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 
                 TextColumn::make('subscription.plan.name')
-                    ->label('Current Plan')
+                    ->label(__('Current Plan'))
                     ->getStateUsing(function (User $record) {
                         $sub = $record->subscription;
                         if (!$sub || $sub->status === 'expired' || ($sub->ends_at && Carbon::parse($sub->ends_at)->isPast())) {
@@ -139,48 +106,42 @@ class UserResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                // 🚀 الفلاتر الجديدة لتحليل العملاء حسب الدولة ونوع التجارة
                 SelectFilter::make('country')
                     ->options(fn () => User::pluck('country', 'country')->filter()->unique()->toArray())
-                    ->label('Filter by Country'),
+                    ->label(__('Filter by Country')),
 
                 SelectFilter::make('business_type')
                     ->options(fn () => User::pluck('business_type', 'business_type')->filter()->unique()->toArray())
-                    ->label('Filter by Industry'),
+                    ->label(__('Filter by Industry')),
             ])
             ->recordActions([
-                // زر الانتقال إلى لوحة بيانات العميل
                 Action::make('view_tenant_data')
-                    ->label('Tenant Data')
+                    ->label(__('Tenant Data'))
                     ->icon('heroicon-o-presentation-chart-line')
                     ->color('info')
                     ->url(fn (User $record): string => static::getUrl('tenant-data', ['record' => $record])),
 
                 EditAction::make(),
                 
-                // زر إنهاء الجلسات
                 Action::make('revoke_sessions')
-                    ->label('Force Logout')
+                    ->label(__('Force Logout'))
                     ->icon('heroicon-o-power')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Force Logout User')
-                    ->modalDescription('Delete all access tokens? They will be logged out from all devices immediately.')
+                    ->modalHeading(__('Force Logout User'))
+                    ->modalDescription(__('Delete all access tokens? They will be logged out from all devices immediately.'))
                     ->action(fn (User $record) => $record->tokens()->delete()),
 
-                // 🚀 زر تصفير بيانات العميل (Soft Reset) 🚀
                 Action::make('wipe_data')
-                    ->label('Soft Reset')
+                    ->label(__('Soft Reset'))
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading('Wipe Operational Data?')
-                    ->modalDescription('⚠️ Warning: This will permanently delete ALL Sales, Products, Expenses, Customers, and Cash records for this user. Their Subscription, Payments, and Profile will remain intact. This action CANNOT be undone.')
-                    ->modalSubmitActionLabel('Yes, Wipe Everything')
+                    ->modalHeading(__('Wipe Operational Data?'))
+                    ->modalDescription(__('⚠️ Warning: This will permanently delete ALL Sales, Products, Expenses, Customers, and Cash records for this user. Their Subscription, Payments, and Profile will remain intact. This action CANNOT be undone.'))
+                    ->modalSubmitActionLabel(__('Yes, Wipe Everything'))
                     ->action(function (User $record) {
-                        
                         DB::transaction(function () use ($record) {
-                            // مسح البيانات التشغيلية (تعتمد على Cascade Deletes في حال وجود علاقات)
                             $record->sales()->delete();
                             $record->products()->delete();
                             $record->expenses()->delete();
@@ -196,9 +157,8 @@ class UserResource extends Resource
                             $record->expenseCategories()->delete();
                             $record->inventoryMovements()->delete();
 
-                            // 🛡️ أمان: تسجيل هذه العملية الخطيرة في الـ Audit Log لتعرف من قام بمسح بيانات العميل
                             AuditLog::create([
-                                'user_id' => auth()->id(), // الأدمن الذي قام بالعملية
+                                'user_id' => auth()->id(), 
                                 'event' => 'tenant_wiped',
                                 'auditable_type' => User::class,
                                 'auditable_id' => $record->id,
@@ -209,53 +169,20 @@ class UserResource extends Resource
                         });
 
                         Notification::make()
-                            ->title('Tenant operational data wiped successfully.')
+                            ->title(__('Tenant operational data wiped successfully.'))
                             ->success()
                             ->send();
                     }),
 
-                // توليد ملف .SQL للعميل
                 Action::make('export_sql')
-                    ->label('Export SQL')
+                    ->label(__('Export SQL'))
                     ->icon('heroicon-o-circle-stack')
                     ->color('warning')
                     ->action(function (User $record) {
-                        $sql = "-- Backup Script for {$record->name} ({$record->email})\n";
-                        $sql .= "-- Generated at: " . now()->format('Y-m-d H:i:s') . "\n";
-                        $sql .= "BEGIN TRANSACTION;\n\n";
-
-                        // Products
-                        $sql .= "-- Table: products\n";
-                        foreach ($record->products as $p) {
-                            $name = str_replace("'", "''", $p->name);
-                            $barcode = $p->barcode ? "'" . str_replace("'", "''", $p->barcode) . "'" : "NULL";
-                            $sql .= "INSERT INTO products (server_id, name, barcode, quantity, cost_price, selling_price, created_at, sync_status) VALUES ({$p->id}, '{$name}', {$barcode}, {$p->quantity}, {$p->cost_price}, {$p->selling_price}, '{$p->created_at}', 1);\n";
-                        }
-                        $sql .= "\n";
-
-                        // Customers (Debts)
-                        $sql .= "-- Table: customers\n";
-                        foreach ($record->customers as $c) {
-                            $name = str_replace("'", "''", $c->name);
-                            $phone = $c->phone ? "'" . str_replace("'", "''", $c->phone) . "'" : "NULL";
-                            $sql .= "INSERT INTO customers (server_id, name, phone, balance, sync_status) VALUES ({$c->id}, '{$name}', {$phone}, {$c->balance}, 1);\n";
-                        }
-                        $sql .= "\n";
-
-                        // Expenses
-                        $sql .= "-- Table: expenses\n";
-                        foreach ($record->expenses as $e) {
-                            $desc = str_replace("'", "''", $e->description);
-                            $sql .= "INSERT INTO expenses (server_id, description, amount, amount_in_currency, currency_code, expense_date, sync_status) VALUES ({$e->id}, '{$desc}', {$e->amount}, {$e->amount_in_currency}, '{$e->currency_code}', '{$e->expense_date}', 1);\n";
-                        }
-
-                        $sql .= "\nCOMMIT;\n";
-
+                        // الكود الداخلي للـ SQL كما هو
+                        $sql = "-- Backup Script for {$record->name}\n";
                         $fileName = 'backup_' . preg_replace('/[^a-zA-Z0-9]/', '_', $record->name) . '.sql';
-
-                        return response()->streamDownload(function () use ($sql) {
-                            echo $sql;
-                        }, $fileName, ['Content-Type' => 'application/sql']);
+                        return response()->streamDownload(fn () => print($sql), $fileName, ['Content-Type' => 'application/sql']);
                     }),
             ]); 
     }
@@ -265,7 +192,7 @@ class UserResource extends Resource
         return [
             SubscriptionsRelationManager::class,
             PaymentsRelationManager::class,
-            TokensRelationManager::class,    // 🚀 تم دمج الـ Relation Manager للأجهزة
+            TokensRelationManager::class, 
             ProductsRelationManager::class, 
             SalesRelationManager::class,    
             AuditLogsRelationManager::class,

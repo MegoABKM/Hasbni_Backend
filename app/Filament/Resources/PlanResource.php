@@ -17,30 +17,24 @@ class PlanResource extends Resource
 {
     protected static ?string $model = Plan::class;
 
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-rectangle-stack';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'SaaS Management';
-    }
+    public static function getNavigationIcon(): string { return 'heroicon-o-rectangle-stack'; }
+    public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
+    public static function getNavigationLabel(): string { return __('Plans'); }
 
     public static function form(Schema $schema): Schema
     {
-        // 🚀 التصحيح الجذري
         return $schema->components([
-            TextInput::make('name')->required(),
-            TextInput::make('monthly_price')->numeric()->prefix('$')->required(),
-            TextInput::make('yearly_price')->numeric()->prefix('$')->required(),
-            TextInput::make('discount_percentage')->numeric()->suffix('%')->default(0),
-            TextInput::make('max_users')->numeric()->required(),
-            TextInput::make('max_products')->numeric()->required(),
-            Toggle::make('is_active')->default(true),
+            TextInput::make('name')->label(__('Plan Name'))->required(),
+            TextInput::make('monthly_price')->label(__('Monthly Price'))->numeric()->prefix('$')->required(),
+            TextInput::make('yearly_price')->label(__('Yearly Price'))->numeric()->prefix('$')->required(),
+            TextInput::make('discount_percentage')->label(__('Discount Percentage'))->numeric()->suffix('%')->default(0),
+            TextInput::make('max_users')->label(__('Max Users'))->numeric()->required(),
+            TextInput::make('max_products')->label(__('Max Products'))->numeric()->required(),
+            Toggle::make('is_active')->label(__('Active'))->default(true),
             KeyValue::make('features')
-                ->keyLabel('Feature Name')
-                ->valueLabel('Value'),
+                ->label(__('Features'))
+                ->keyLabel(__('Feature Name'))
+                ->valueLabel(__('Value')),
         ]);
     }
 
@@ -48,13 +42,12 @@ class PlanResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable()->sortable(),
-                TextColumn::make('monthly_price')->money('usd')->sortable(),
-                TextColumn::make('yearly_price')->money('usd')->sortable(),
-                TextColumn::make('max_users')->sortable(),
-                IconColumn::make('is_active')->boolean(),
+                TextColumn::make('name')->label(__('Plan Name'))->searchable()->sortable(),
+                TextColumn::make('monthly_price')->label(__('Monthly Price'))->money('usd')->sortable(),
+                TextColumn::make('yearly_price')->label(__('Yearly Price'))->money('usd')->sortable(),
+                TextColumn::make('max_users')->label(__('Max Users'))->sortable(),
+                IconColumn::make('is_active')->label(__('Active'))->boolean(),
             ])
-            // 🚀 التصحيح الجذري
             ->recordActions([
                 EditAction::make(),
             ]);

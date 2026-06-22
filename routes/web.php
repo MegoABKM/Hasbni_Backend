@@ -35,3 +35,11 @@ Route::get('/get-app', function () {
 Route::get('/hasbni-setup', function () {
     return view('download');
 });
+
+Route::get('/clear-cache', function() {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+    }
+    return '✅ تم مسح الكاش بنجاح! السيرفر الآن سيقرأ الأكواد الجديدة.';
+});

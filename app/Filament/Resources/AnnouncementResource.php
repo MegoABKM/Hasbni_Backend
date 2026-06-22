@@ -14,7 +14,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
 
-// 🚀 مسار الأزرار الموحد والصحيح لنسختك
+// 🚨 الاستيراد الصحيح الذي يتوافق مع نسختك 🚨
 use Filament\Actions\EditAction; 
 use Filament\Actions\DeleteAction; 
 
@@ -32,7 +32,6 @@ class AnnouncementResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        // 🚀 استخدام components بدلاً من schema
         return $schema->components([
             TextInput::make('title')->required(),
             Textarea::make('message')->required(),
@@ -54,10 +53,10 @@ class AnnouncementResource extends Resource
                 TextColumn::make('type')->badge(),
                 IconColumn::make('is_active')->boolean(),
             ])
-            // 🚀 التعديل السحري الذي سيحل مشكلة التحميل اللانهائي
+            // 🚨 استخدام recordActions بدلاً من actions ليتوافق مع نسختك 🚨
             ->recordActions([
                 EditAction::make(), 
-                DeleteAction::make()
+                DeleteAction::make(),
             ]);
     }
 
