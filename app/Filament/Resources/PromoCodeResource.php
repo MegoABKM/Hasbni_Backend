@@ -19,7 +19,10 @@ class PromoCodeResource extends Resource
     protected static ?string $model = PromoCode::class;
 
     public static function getNavigationIcon(): string { return 'heroicon-o-ticket'; }
-    public static function getNavigationGroup(): ?string { return 'SaaS Management'; }
+    
+    // 🚀 تم إصلاح المجموعة والترجمة هنا 🚀
+    public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
+    public static function getNavigationLabel(): string { return __('Promo Codes'); }
 
     public static function form(Schema $schema): Schema
     {
@@ -40,7 +43,6 @@ class PromoCodeResource extends Resource
                 TextColumn::make('code')->searchable()->badge()->color('primary'),
                 TextColumn::make('discount_percentage')->suffix('%')->sortable(),
                 
-                // الاستخدامات الفعلية (التي نتج عنها دفع)
                 TextColumn::make('payments_count')
                     ->counts('payments')
                     ->label('Paid Uses')
@@ -48,7 +50,6 @@ class PromoCodeResource extends Resource
                     ->badge()
                     ->color('info'),
 
-                // 🚀 حجم المبيعات التي جلبها هذا الكوبون (ROI)
                 TextColumn::make('payments_sum_amount')
                     ->label('Generated Revenue (ROI)')
                     ->money('usd')

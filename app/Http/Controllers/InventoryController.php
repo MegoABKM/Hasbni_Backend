@@ -3,10 +3,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Events\ShopDataUpdated;
 
 class InventoryController extends Controller
 {
-    // جلب الحركات للهاتف الجديد
     public function index(Request $request) {
         return response()->json(
             $request->user()->inventoryMovements()->latest('created_at')->get()
@@ -22,7 +22,6 @@ class InventoryController extends Controller
             if ($request->has('movements') && is_array($request->movements)) {
                 foreach ($request->movements as $mov) {
                     
-                    // FirstOrCreate تمنع التكرار إذا أرسل التطبيق نفس الحركة
                     $record = $user->inventoryMovements()->firstOrCreate(
                         [
                             'product_id' => $mov['product_id'],
@@ -37,7 +36,6 @@ class InventoryController extends Controller
                         ]
                     );
 
-                    // نُرجع الـ ID لتطبيق فلاتر
                     $responses[] = [
                         'local_id' => $mov['local_id'],
                         'server_id' => $record->id
@@ -45,6 +43,11 @@ class InventoryController extends Controller
                 }
             }
         });
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'inventory_synced'));
+        }
+
         return response()->json(['success' => true, 'synced' => $responses]);
     }
 }

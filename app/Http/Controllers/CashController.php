@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Events\ShopDataUpdated;
 
 class CashController extends Controller
 {
@@ -27,7 +28,6 @@ class CashController extends Controller
                         ? Carbon::parse($t['transaction_date'])->format('Y-m-d H:i:s') 
                         : now()->format('Y-m-d H:i:s');
 
-                    // 🚨 هنا الإصلاح: نقارن مع transaction_date بدلاً من created_at
                     $existing = $user->cashTransactions()
                         ->where('transaction_type', $t['transaction_type'])
                         ->where('amount', $t['amount'])
@@ -50,6 +50,10 @@ class CashController extends Controller
             }
         });
         
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'cash_synced'));
+        }
+
         return response()->json(['success' => true]);
     }
 

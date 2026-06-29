@@ -5,7 +5,7 @@
             
             <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
                 <x-filament::button type="submit" color="primary" icon="heroicon-o-paper-airplane">
-                    Send Campaign (إرسال الحملة) 🚀
+                    {{ __('Send Campaign') }} 🚀
                 </x-filament::button>
             </div>
         </form>

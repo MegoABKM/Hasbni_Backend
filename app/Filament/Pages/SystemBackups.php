@@ -11,22 +11,10 @@ use Carbon\Carbon;
 class SystemBackups extends Page
 {
     protected string $view = 'filament.pages.system-backups';
-
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-circle-stack';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'System Settings';
-    }
-
-    public function getTitle(): string
-    {
-        return 'SaaS Backups (النسخ الاحتياطي الشامل)';
-    }
-
+public static function getNavigationIcon(): string { return 'heroicon-o-circle-stack'; }
+    public static function getNavigationGroup(): ?string { return __('System Settings'); }
+    public static function getNavigationLabel(): string { return __('System Backups'); }
+    public function getTitle(): string { return __('System Backups'); }
     public array $backupFiles = [];
 
     public function mount()

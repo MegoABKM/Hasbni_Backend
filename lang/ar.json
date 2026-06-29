@@ -4,7 +4,24 @@
     "Billing & Revenue": "الفواتير والإيرادات",
     "Support & Help": "الدعم والمساعدة",
     
+    "Dashboard": "لوحة التحكم",
     "Email Campaigns": "الحملات البريدية",
+    "Plans": "باقات الاشتراك",
+    "Users & Tenants": "العملاء والمتاجر",
+    "Global Settings": "الإعدادات العامة",
+    "Push Notifications": "إرسال إشعارات",
+    "Announcements": "الإعلانات",
+    "Promo Codes": "أكواد الخصم",
+    "System Backups": "النسخ الاحتياطي",
+    "System Logs": "عارض الأخطاء",
+    "Audit Logs": "سجل الحركات",
+    "Subscriptions": "الاشتراكات",
+    "Payments": "سجل المدفوعات",
+    
+    "FAQs": "الأسئلة الشائعة",
+    "Instructions": "تعليمات الاستخدام",
+    "Support Tickets": "تذاكر الدعم",
+    
     "Target Audience": "الجمهور المستهدف",
     "All Users": "جميع المستخدمين",
     "Free Plan Users": "مستخدمي الباقة المجانية",
@@ -14,27 +31,16 @@
     "Email Subject": "عنوان الرسالة",
     "Email Body": "محتوى الرسالة",
     "Send Campaign": "إرسال الحملة",
+    "Send Notification": "إرسال الإشعار",
 
-    "Global Settings": "الإعدادات العامة",
     "Firebase Credentials File": "ملف JSON للإشعارات (Firebase)",
     "WhatsApp Support Number": "رقم واتساب الدعم",
     "Minimum App Version": "إصدار الإجبار على التحديث",
     "Update URL": "رابط التحديث",
     "Maintenance Mode": "وضع الصيانة",
 
-    "Push Notifications": "إرسال إشعارات",
     "Notification Title": "عنوان الإشعار",
     "Notification Body": "نص الإشعار",
-
-    "SaaS Backups": "النسخ الاحتياطي الشامل",
-    "System Logs": "عارض الأخطاء",
-
-    "Users": "العملاء والمتاجر",
-    "Plans": "باقات الاشتراك",
-    "Subscriptions": "الاشتراكات",
-    "Payments": "المدفوعات",
-    "Promo Codes": "أكواد الخصم",
-    "Announcements": "الإعلانات",
 
     "Name": "الاسم",
     "Email": "البريد الإلكتروني",
@@ -52,8 +58,28 @@
     "Failed": "فاشل",
     "Refunded": "مسترد",
     
-    "Dashboard": "لوحة القيادة",
-    "Tenant Data": "بيانات العميل",
+    "Tenant Data": "بيانات المتجر",
     "Force Logout": "إنهاء الجلسات",
-    "Soft Reset": "تصفير البيانات"
+    "Soft Reset": "تصفير البيانات",
+
+    "Pro Users": "مشتركي باقة Pro",
+    "Enterprise Users": "مشتركي باقة Enterprise",
+    "Free Users": "المستخدمين المجانيين",
+    "Banned Accounts": "الحسابات المحظورة",
+    
+    "Active Tenants (Today)": "المتاجر النشطة (اليوم)",
+    "Database Size": "حجم قاعدة البيانات",
+    "Total Registered Shops": "إجمالي المتاجر المسجلة",
+    "active this week": "نشط هذا الأسبوع",
+    "Total server storage used": "إجمالي مساحة التخزين المستخدمة بالسيرفر",
+    "All time registrations": "إجمالي الاشتراكات التاريخية",
+
+    "ARPU (Avg Revenue Per User)": "متوسط دخل العميل (ARPU)",
+    "Avg active user monthly pay": "متوسط ما يدفعه العميل النشط شهرياً",
+    "Churn Rate": "معدل الفقد (Churn Rate)",
+    "users left in last 30 days": "عملاء غادروا في آخر 30 يوم",
+    "LTV (Lifetime Value)": "القيمة الدائمة للعميل (LTV)",
+    "Avg total customer value": "متوسط القيمة الإجمالية للعميل",
+    "Monthly Recurring Revenue (MRR)": "الإيرادات الشهرية المتكررة (MRR)",
+    "Revenue ($)": "الإيرادات ($)"
 }

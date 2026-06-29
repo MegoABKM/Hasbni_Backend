@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast; // 👈 تم الاستيراد هنا بشكل نظيف لـ Laravel Echo
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
@@ -14,8 +15,17 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SaaSController;
-use App\Http\Controllers\SupportController; // 👈 استيراد متحكم الدعم
+use App\Http\Controllers\SupportController;
 
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+// --------------------------------------------------------------------------
+// Public Routes (المسارات العامة المفتوحة للجميع)
+// --------------------------------------------------------------------------
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
@@ -30,7 +40,7 @@ Route::get('/plans', [SaaSController::class, 'getPlans']);
 Route::get('/announcements/active', [SaaSController::class, 'getActiveAnnouncement']);
 Route::post('/promo-codes/validate', [SaaSController::class, 'validatePromoCode']);
 
-// 👈 مسارات الدعم (العامة)
+// مسارات الدعم (العامة)
 Route::get('/support/faqs', [SupportController::class, 'faqs']);
 Route::get('/support/instructions', [SupportController::class, 'instructions']);
 
@@ -45,9 +55,15 @@ Route::get('/app-status', function() {
 Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class, 'handleStripe']);
 Route::get('/webhooks/myfatoorah/callback', [\App\Http\Controllers\MyFatoorahController::class, 'callback']);
 
+// 🚨 تفعيل مسار المصادقة الخاص بـ Sanctum لقنوات البث (WebSockets / Reverb) لتطبيق الموبايل 🚨
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
+
+// --------------------------------------------------------------------------
+// Protected Routes (المسارات المحمية بـ Sanctum)
+// --------------------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
     
-    // 👈 مسارات التذاكر (المحمية)
+    // مسارات التذاكر (المحمية)
     Route::get('/support/tickets', [SupportController::class, 'myTickets']);
     Route::post('/support/tickets', [SupportController::class, 'createTicket'])->middleware('throttle:3,1'); // حماية من السبام
     

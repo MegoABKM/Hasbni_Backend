@@ -16,9 +16,10 @@ use Filament\Actions\DeleteAction;
 class InstructionResource extends Resource
 {
     protected static ?string $model = Instruction::class;
+    
     public static function getNavigationIcon(): string { return 'heroicon-o-book-open'; }
-    public static function getNavigationGroup(): ?string { return 'Support & Help'; }
-    public static function getNavigationLabel(): string { return 'Instructions (تعليمات الاستخدام)'; }
+    public static function getNavigationGroup(): ?string { return __('Support & Help'); }
+    public static function getNavigationLabel(): string { return __('Instructions'); }
 
     public static function form(Schema $schema): Schema
     {

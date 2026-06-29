@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use App\Events\ShopDataUpdated;
 
 class OwnerWithdrawalController extends Controller {
     public function index(Request $request) {
@@ -8,6 +9,7 @@ class OwnerWithdrawalController extends Controller {
     }
 
     public function store(Request $request) {
+        $user = $request->user();
         $validated = $request->validate([
             'description' => 'nullable|string',
             'amount' => 'required|numeric',
@@ -17,10 +19,9 @@ class OwnerWithdrawalController extends Controller {
             'created_at' => 'nullable|date',
         ]);
         
-        // 🚨 Server-Side Deduplication
         $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
         if ($clientCreatedAt) {
-            $existing = $request->user()->withdrawals()
+            $existing = $user->withdrawals()
                 ->where('description', $validated['description'])
                 ->where('created_at', $clientCreatedAt)
                 ->first();
@@ -29,10 +30,17 @@ class OwnerWithdrawalController extends Controller {
             $validated['updated_at'] = $clientCreatedAt;
         }
 
-        return $request->user()->withdrawals()->create($validated);
+        $withdrawal = $user->withdrawals()->create($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'withdrawal_created'));
+        }
+
+        return $withdrawal;
     }
 
     public function update(Request $request, $id) {
+        $user = $request->user();
         $validated = $request->validate([
             'description' => 'nullable|string',
             'amount' => 'required|numeric',
@@ -41,12 +49,23 @@ class OwnerWithdrawalController extends Controller {
             'withdrawal_date' => 'required|date',
         ]);
         
-        $request->user()->withdrawals()->findOrFail($id)->update($validated);
+        $user->withdrawals()->findOrFail($id)->update($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'withdrawal_updated'));
+        }
+
         return response()->json(['success'=>true]);
     }
 
     public function destroy(Request $request, $id) {
-        $request->user()->withdrawals()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->withdrawals()->findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'withdrawal_deleted'));
+        }
+
         return response()->json(['success'=>true]);
     }
 }

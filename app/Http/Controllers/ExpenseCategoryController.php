@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
+use App\Events\ShopDataUpdated;
 
 class ExpenseCategoryController extends Controller
 {
@@ -9,19 +10,31 @@ class ExpenseCategoryController extends Controller
     }
 
     public function store(Request $request) {
+        $user = $request->user();
         $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
 
-        // Anti-Duplication
-        $existing = $request->user()->expenseCategories()->where('name', $validated['name'])->first();
+        $existing = $user->expenseCategories()->where('name', $validated['name'])->first();
         if ($existing) return $existing;
 
-        return $request->user()->expenseCategories()->create($validated);
+        $category = $user->expenseCategories()->create($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'expense_category_created'));
+        }
+
+        return $category;
     }
     
     public function destroy(Request $request, $id) {
-         $request->user()->expenseCategories()->findOrFail($id)->delete();
+         $user = $request->user();
+         $user->expenseCategories()->findOrFail($id)->delete();
+
+         if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'expense_category_deleted'));
+         }
+
          return response()->json(['success'=>true]);
     }
 }

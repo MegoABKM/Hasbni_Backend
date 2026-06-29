@@ -11,20 +11,10 @@ class SystemLogs extends Page
     // 🚀 إزالة كلمة static من $view
     protected string $view = 'filament.pages.system-logs';
 
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-command-line';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'System Settings';
-    }
-
-    public function getTitle(): string
-    {
-        return 'System Logs (عارض الأخطاء)';
-    }
+   public static function getNavigationIcon(): string { return 'heroicon-o-command-line'; }
+    public static function getNavigationGroup(): ?string { return __('System Settings'); }
+    public static function getNavigationLabel(): string { return __('System Logs'); }
+    public function getTitle(): string { return __('System Logs'); }
 
     public string $logContent = '';
 

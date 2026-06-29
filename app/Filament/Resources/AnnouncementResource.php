@@ -13,8 +13,6 @@ use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
-
-// 🚨 الاستيراد الصحيح الذي يتوافق مع نسختك 🚨
 use Filament\Actions\EditAction; 
 use Filament\Actions\DeleteAction; 
 
@@ -27,21 +25,25 @@ class AnnouncementResource extends Resource
     }
     
     public static function getNavigationGroup(): ?string { 
-        return 'SaaS Management'; 
+        return __('SaaS Management'); 
+    }
+
+    public static function getNavigationLabel(): string { 
+        return __('Announcements'); 
     }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('title')->required(),
-            Textarea::make('message')->required(),
-            Select::make('type')->options([
+            TextInput::make('title')->label(__('Title'))->required(),
+            Textarea::make('message')->label(__('Message'))->required(),
+            Select::make('type')->label(__('Type'))->options([
                 'info' => 'Info',
                 'warning' => 'Warning',
                 'danger' => 'Danger'
             ])->default('info')->required(),
-            DateTimePicker::make('expires_at')->label('Expiry Date'),
-            Toggle::make('is_active')->default(true),
+            DateTimePicker::make('expires_at')->label(__('Expiry Date')),
+            Toggle::make('is_active')->label(__('Active'))->default(true),
         ]);
     }
 
@@ -49,11 +51,10 @@ class AnnouncementResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('title')->searchable(),
-                TextColumn::make('type')->badge(),
-                IconColumn::make('is_active')->boolean(),
+                TextColumn::make('title')->label(__('Title'))->searchable(),
+                TextColumn::make('type')->label(__('Type'))->badge(),
+                IconColumn::make('is_active')->label(__('Active'))->boolean(),
             ])
-            // 🚨 استخدام recordActions بدلاً من actions ليتوافق مع نسختك 🚨
             ->recordActions([
                 EditAction::make(), 
                 DeleteAction::make(),

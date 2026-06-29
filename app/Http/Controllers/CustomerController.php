@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Events\ShopDataUpdated;
 
 class CustomerController extends Controller
 {
@@ -18,13 +19,23 @@ class CustomerController extends Controller
             'balance' => 'nullable|numeric',
         ]);
 
-        // Anti-Duplication: Check if customer with same name already exists
-        $existing = $request->user()->customers()->where('name', $validated['name'])->first();
+        $user = $request->user();
+
+        // حماية من التكرار عبر الاسم (Anti-Duplication)
+        $existing = $user->customers()->where('name', $validated['name'])->first();
         if ($existing) {
             return $existing;
         }
 
-        return $request->user()->customers()->create($validated);
+        // إنشاء العميل
+        $customer = $user->customers()->create($validated);
+
+        // 🚀 إرسال بيانات العميل بالكامل لمشتركي الإنتربرايز
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'customer_created', $customer->toArray()));
+        }
+
+        return $customer;
     }
 
     public function update(Request $request, $id) {
@@ -34,13 +45,29 @@ class CustomerController extends Controller
             'balance' => 'sometimes|numeric',
         ]);
 
-        $customer = $request->user()->customers()->findOrFail($id);
+        $user = $request->user();
+        $customer = $user->customers()->findOrFail($id);
+        
+        // تحديث بيانات العميل
         $customer->update($validated);
+
+        // 🚀 إرسال التحديث بالكامل للموبايل
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'customer_updated', $customer->toArray()));
+        }
+
         return response()->json(['success' => true, 'customer' => $customer]);
     }
 
     public function destroy(Request $request, $id) {
-        $request->user()->customers()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->customers()->findOrFail($id)->delete();
+
+        // 🚀 إرسال طلب الحذف للموبايل
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'customer_deleted', ['id' => $id]));
+        }
+
         return response()->json(['success' => true]);
     }
 
@@ -50,10 +77,11 @@ class CustomerController extends Controller
             'payment_date' => 'required|date'
         ]);
 
-        $customer = $request->user()->customers()->findOrFail($id);
+        $user = $request->user();
+        $customer = $user->customers()->findOrFail($id);
         $clientDate = Carbon::parse($validated['payment_date'])->format('Y-m-d H:i:s');
 
-        // Anti-Duplication for Payments
+        // حماية من تكرار تسجيل الدفعة (Anti-Duplication for Payments)
         $existing = $customer->payments()
             ->where('amount', $validated['amount'])
             ->where('payment_date', $clientDate)
@@ -69,6 +97,11 @@ class CustomerController extends Controller
             'created_at' => $clientDate,
             'updated_at' => $clientDate,
         ]);
+
+        // 🚀 إعلام التطبيق بوجود دفعة جديدة (سيقوم بتحديث الأرقام الصعبة تلقائياً)
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'customer_payment_synced', $payment->toArray()));
+        }
 
         return response()->json(['id' => $payment->id]);
     }

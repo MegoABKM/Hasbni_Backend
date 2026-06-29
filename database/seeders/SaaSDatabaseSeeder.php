@@ -37,15 +37,35 @@ class SaaSDatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        Plan::updateOrCreate(['name' => 'Pro'], [
-            'monthly_price' => 9.99, 'yearly_price' => 99.90, 'max_users' => 5, 'max_products' => 5000,
-            'features' => json_encode(['can_sync' => true, 'reports' => 'advanced', 'support' => 'priority', 'partnership' => true, 'suppliers' => true]),
+          Plan::updateOrCreate(['name' => 'Pro'], [
+            'monthly_price' => 9.99, 
+            'yearly_price' => 99.90, 
+            'max_users' => 2, // 👈 1 Manager + 1 Cashier = 2 Users
+            'max_products' => 5000,
+            'features' => json_encode([
+                'can_sync' => true, 
+                'reports' => 'advanced', 
+                'support' => 'priority', 
+                'partnership' => true, 
+                'suppliers' => true,
+                'full_inventory_sync' => false // 👈 غير متاحة في البرو
+            ]),
             'is_active' => true,
         ]);
         
-        Plan::updateOrCreate(['name' => 'Enterprise'], [
-            'monthly_price' => 29.99, 'yearly_price' => 299.90, 'max_users' => 999, 'max_products' => 999999,
-            'features' => json_encode(['can_sync' => true, 'reports' => 'advanced', 'support' => '24/7', 'partnership' => true, 'suppliers' => true]),
+     Plan::updateOrCreate(['name' => 'Enterprise'], [
+            'monthly_price' => 29.99, 
+            'yearly_price' => 299.90, 
+            'max_users' => 999, // 👈 كاشير لا محدود
+            'max_products' => 999999,
+            'features' => json_encode([
+                'can_sync' => true, 
+                'reports' => 'advanced', 
+                'support' => '24/7', 
+                'partnership' => true, 
+                'suppliers' => true,
+                'full_inventory_sync' => true // 👈 مزامنة مخزون فورية وتتبع النواقص
+            ]),
             'is_active' => true,
         ]);
     }

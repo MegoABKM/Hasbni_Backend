@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Events\ShopDataUpdated;
 
 class SupplierController extends Controller
 {
@@ -18,13 +19,19 @@ class SupplierController extends Controller
             'balance' => 'nullable|numeric',
         ]);
 
-        // Anti-Duplication by Name
-        $existing = $request->user()->suppliers()->where('name', $validated['name'])->first();
+        $user = $request->user();
+        $existing = $user->suppliers()->where('name', $validated['name'])->first();
         if ($existing) {
             return $existing;
         }
 
-        return $request->user()->suppliers()->create($validated);
+        $supplier = $user->suppliers()->create($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'supplier_created'));
+        }
+
+        return $supplier;
     }
 
     public function update(Request $request, int $id) {
@@ -33,13 +40,26 @@ class SupplierController extends Controller
             'phone' => 'nullable|string|max:50',
             'balance' => 'sometimes|numeric',
         ]);
-        $supplier = $request->user()->suppliers()->findOrFail($id);
+        
+        $user = $request->user();
+        $supplier = $user->suppliers()->findOrFail($id);
         $supplier->update($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'supplier_updated'));
+        }
+
         return response()->json(['success' => true, 'supplier' => $supplier]);
     }
 
     public function destroy(Request $request, int $id) {
-        $request->user()->suppliers()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->suppliers()->findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'supplier_deleted'));
+        }
+
         return response()->json(['success' => true]);
     }
 
@@ -49,10 +69,10 @@ class SupplierController extends Controller
             'payment_date' => 'required|date'
         ]);
 
-        $supplier = $request->user()->suppliers()->findOrFail($id);
+        $user = $request->user();
+        $supplier = $user->suppliers()->findOrFail($id);
         $clientDate = Carbon::parse($validated['payment_date'])->format('Y-m-d H:i:s');
 
-        // Anti-Duplication for Payments
         $existing = $supplier->payments()
             ->where('amount', $validated['amount'])
             ->where('payment_date', $clientDate)
@@ -68,6 +88,10 @@ class SupplierController extends Controller
             'created_at' => $clientDate,
             'updated_at' => $clientDate,
         ]);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'supplier_payment_synced'));
+        }
 
         return response()->json(['id' => $payment->id]);
     }

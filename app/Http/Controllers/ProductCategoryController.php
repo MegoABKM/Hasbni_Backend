@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\ProductCategory;
+use App\Events\ShopDataUpdated;
 
 class ProductCategoryController extends Controller
 {
@@ -18,17 +19,29 @@ class ProductCategoryController extends Controller
             'color' => 'nullable|string|max:20',
         ]);
 
-        $existing = $request->user()->productCategories()->where('name', $validated['name'])->first();
+        $user = $request->user();
+        $existing = $user->productCategories()->where('name', $validated['name'])->first();
+        
         if ($existing) {
             $existing->update([
                 'icon' => $validated['icon'] ?? $existing->icon,
                 'color' => $validated['color'] ?? $existing->color,
             ]);
+            
+            if ($user->hasRealtimeSyncFeature()) {
+                event(new ShopDataUpdated($user->id, 'product_category_updated'));
+            }
             return $existing;
         }
 
-        $validated['user_id'] = $request->user()->id;
-        return ProductCategory::create($validated);
+        $validated['user_id'] = $user->id;
+        $category = ProductCategory::create($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_category_created'));
+        }
+
+        return $category;
     }
 
     public function update(Request $request, $id) {
@@ -38,14 +51,25 @@ class ProductCategoryController extends Controller
             'color' => 'nullable|string|max:20',
         ]);
 
-        $category = $request->user()->productCategories()->findOrFail($id);
+        $user = $request->user();
+        $category = $user->productCategories()->findOrFail($id);
         $category->update($validated);
         
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_category_updated'));
+        }
+
         return response()->json($category);
     }
     
     public function destroy(Request $request, $id) {
-         $request->user()->productCategories()->findOrFail($id)->delete();
-         return response()->json(['success'=>true]);
+        $user = $request->user();
+        $user->productCategories()->findOrFail($id)->delete();
+        
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_category_deleted'));
+        }
+
+        return response()->json(['success'=>true]);
     }
 }

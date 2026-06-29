@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Events\ShopDataUpdated;
 
 class ProductController extends Controller
 {
@@ -34,14 +35,16 @@ class ProductController extends Controller
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
             'product_category_id' => 'nullable|integer',
-            'supplier_id' => 'nullable|integer', // 🚀 Added
+            'supplier_id' => 'nullable|integer',
             'created_at' => 'nullable|date',
         ]);
 
         $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
+        $user = $request->user();
 
+        // حماية من التكرار (Anti-Duplication)
         if ($clientCreatedAt) {
-            $existing = $request->user()->products()
+            $existing = $user->products()
                 ->where('name', $validated['name'])
                 ->where('created_at', $clientCreatedAt)
                 ->first();
@@ -52,11 +55,20 @@ class ProductController extends Controller
             $validated['updated_at'] = $clientCreatedAt;
         }
 
-        return $request->user()->products()->create($validated);
+        // إنشاء المنتج
+        $product = $user->products()->create($validated);
+
+        // 🚀 إرسال المنتج بالكامل في الـ Payload لمشتركي الإنتربرايز
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_created', $product->toArray()));
+        }
+
+        return $product;
     }
 
     public function update(Request $request, $id) {
-        $product = $request->user()->products()->findOrFail($id);
+        $user = $request->user();
+        $product = $user->products()->findOrFail($id);
 
         $validated = $request->validate([
             'name' => 'sometimes|string',
@@ -68,15 +80,29 @@ class ProductController extends Controller
             'last_purchase_price' => 'nullable|numeric',
             'partner_id' => 'nullable|integer',
             'product_category_id' => 'nullable|integer',
-            'supplier_id' => 'nullable|integer', // 🚀 Added
+            'supplier_id' => 'nullable|integer',
         ]);
 
+        // تحديث المنتج
         $product->update($validated);
+
+        // 🚀 إرسال التحديث بالكامل في الـ Payload
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_updated', $product->toArray()));
+        }
+
         return $product;
     }
 
     public function destroy(Request $request, $id) {
-        $request->user()->products()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->products()->findOrFail($id)->delete();
+
+        // 🚀 إرسال الـ ID فقط للحذف ليقوم الموبايل بحذفه محلياً
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'product_deleted', ['id' => $id]));
+        }
+
         return response()->json(['message' => 'Deleted']);
     }
 }

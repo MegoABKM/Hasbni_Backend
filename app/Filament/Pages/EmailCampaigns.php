@@ -19,21 +19,9 @@ class EmailCampaigns extends Page implements HasForms
 
     protected string $view = 'filament.pages.email-campaigns';
 
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-envelope';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return __('SaaS Management'); // 👈 ترجمة
-    }
-
-   public function getTitle(): string
-    {
-        return __('Email Campaigns'); // 👈 ترجمة
-    }
-
+  public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
+    public static function getNavigationLabel(): string { return __('Email Campaigns'); }
+    public function getTitle(): string { return __('Email Campaigns'); }
     public ?array $data = [];
 
     public function mount(): void

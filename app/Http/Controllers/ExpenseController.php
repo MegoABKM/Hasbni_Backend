@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule; 
+use App\Events\ShopDataUpdated;
 
 class ExpenseController extends Controller
 {
@@ -17,6 +18,7 @@ class ExpenseController extends Controller
     }
 
     public function store(Request $request) {
+        $user = $request->user();
         $validated = $request->validate([
             'description' => 'required|string',
             'amount' => 'required|numeric',
@@ -25,19 +27,17 @@ class ExpenseController extends Controller
             'expense_date' => 'required|date',
             'created_at' => 'nullable|date',
             'category_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('expense_categories', 'id')->where(function ($query) use ($request) {
-                    $query->where('user_id', $request->user()->id);
+                'nullable', 'integer',
+                Rule::exists('expense_categories', 'id')->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
                 }),
             ],
             'recurrence' => 'nullable|string',
         ]);
 
-        // 🚨 Server-Side Deduplication
         $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
         if ($clientCreatedAt) {
-            $existing = $request->user()->expenses()
+            $existing = $user->expenses()
                 ->where('description', $validated['description'])
                 ->where('created_at', $clientCreatedAt)
                 ->first();
@@ -46,10 +46,17 @@ class ExpenseController extends Controller
             $validated['updated_at'] = $clientCreatedAt;
         }
 
-        return $request->user()->expenses()->create($validated);
+        $expense = $user->expenses()->create($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'expense_created'));
+        }
+
+        return $expense;
     }
 
     public function update(Request $request, $id) {
+        $user = $request->user();
         $validated = $request->validate([
             'description' => 'sometimes|string',
             'amount' => 'sometimes|numeric',
@@ -57,21 +64,31 @@ class ExpenseController extends Controller
             'currency_code' => 'nullable|string|max:3',
             'expense_date' => 'sometimes|date',
             'category_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('expense_categories', 'id')->where(function ($query) use ($request) {
-                    $query->where('user_id', $request->user()->id);
+                'nullable', 'integer',
+                Rule::exists('expense_categories', 'id')->where(function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
                 }),
             ],
             'recurrence' => 'nullable|string',
         ]);
 
-        $request->user()->expenses()->findOrFail($id)->update($validated);
+        $user->expenses()->findOrFail($id)->update($validated);
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'expense_updated'));
+        }
+
         return response()->json(['message' => 'Updated']);
     }
 
     public function destroy(Request $request, $id) {
-        $request->user()->expenses()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->expenses()->findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'expense_deleted'));
+        }
+
         return response()->json(['message' => 'Deleted']);
     }
 }

@@ -12,7 +12,6 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use App\Models\AppConfig;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Google\Client as GoogleClient;
 
 class PushNotifications extends Page implements HasForms
@@ -20,9 +19,13 @@ class PushNotifications extends Page implements HasForms
     use InteractsWithForms;
 
     protected string $view = 'filament.pages.push-notifications';
+    
     public static function getNavigationIcon(): string { return 'heroicon-o-bell-alert'; }
-    public static function getNavigationGroup(): ?string { return 'SaaS Management'; }
-    public function getTitle(): string { return 'Push Notifications (إرسال إشعارات)'; }
+    
+    // 🚀 تم إصلاح المجموعة والترجمة هنا 🚀
+    public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
+    public static function getNavigationLabel(): string { return __('Push Notifications'); }
+    public function getTitle(): string { return __('Push Notifications'); }
     
     public ?array $data = [];
 
@@ -34,15 +37,15 @@ class PushNotifications extends Page implements HasForms
     {
         return $schema->components([
             Select::make('target_audience')
-                ->label('Target Audience')
+                ->label(__('Target Audience'))
                 ->options([
-                    'all' => 'All Users (جميع المستخدمين)',
-                    'free' => 'Free Plan Users (الباقة المجانية)',
-                    'pro' => 'Paid Subscribers (المشتركين)',
+                    'all' => __('All Users'),
+                    'free' => __('Free Plan Users'),
+                    'pro' => __('Paid Subscribers'),
                 ])->required(),
 
-            TextInput::make('title')->label('Notification Title (عنوان الإشعار)')->required(),
-            Textarea::make('body')->label('Notification Body (نص الإشعار)')->required(),
+            TextInput::make('title')->label(__('Notification Title'))->required(),
+            Textarea::make('body')->label(__('Notification Body'))->required(),
         ])->statePath('data');
     }
 
@@ -58,9 +61,7 @@ class PushNotifications extends Page implements HasForms
         };
 
         $projectId = env('FIREBASE_PROJECT_ID');
-        
         $credentialsPath = null;
-
         $firebaseFileKey = AppConfig::where('key', 'firebase_json')->value('value');
 
         if ($firebaseFileKey && file_exists(storage_path('app/' . $firebaseFileKey))) {
@@ -73,7 +74,7 @@ class PushNotifications extends Page implements HasForms
         if (!$credentialsPath) {
             Notification::make()
                 ->title('Firebase JSON Missing!')
-                ->body('لم يتم العثور على ملف الصلاحيات. يرجى رفعه من الإعدادات أو التأكد من وجود ملف firebase-auth.json في مجلد storage/app.')
+                ->body('لم يتم العثور على ملف الصلاحيات. يرجى رفعه من الإعدادات.')
                 ->danger()
                 ->send();
             return;
@@ -90,7 +91,6 @@ class PushNotifications extends Page implements HasForms
             $token = $client->getAccessToken();
             $accessToken = $token['access_token'];
 
-            // 🚀 البث المتقدم المتوافق مع بروتوكول FCM V1 لإجبار الهواتف على عرض الإشعار
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $accessToken,
                 'Content-Type' => 'application/json',
@@ -101,14 +101,12 @@ class PushNotifications extends Page implements HasForms
                         'title' => $data['title'],
                         'body' => $data['body'],
                     ],
-                    // 👈 إرسال إشارات إيقاظ لنظام الأندرويد حتى لو كان الهاتف مقفلاً أو التطبيق بالخلفية
                     'android' => [
                         'notification' => [
                             'sound' => 'default',
                             'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                         ],
                     ],
-                    // 👈 إرسال إشارات إيقاظ لنظام iOS (Apple) مع تفعيل الصوت والعداد
                     'apns' => [
                         'payload' => [
                             'aps' => [
@@ -121,7 +119,7 @@ class PushNotifications extends Page implements HasForms
             ]);
 
             if ($response->successful()) {
-                Notification::make()->title("Notification Broadcasted!")->success()->send();
+                Notification::make()->title(__("Notification Broadcasted!"))->success()->send();
                 $this->form->fill();
             } else {
                 Notification::make()->title('Failed to broadcast.')->body($response->json('error.message') ?? 'Unknown error')->danger()->send();
@@ -136,7 +134,7 @@ class PushNotifications extends Page implements HasForms
     {
         return [
             Action::make('send')
-                ->label('Send Notification 🚀')
+                ->label(__('Send Notification'))
                 ->submit('sendPush')
                 ->color('primary')
                 ->requiresConfirmation(),

@@ -20,8 +20,9 @@ class SubscriptionResource extends Resource
 {
     protected static ?string $model = Subscription::class;
 
-    public static function getNavigationIcon(): ?string { return 'heroicon-o-calendar-days'; }
-    public static function getNavigationGroup(): ?string { return 'Billing & Revenue'; }
+  public static function getNavigationIcon(): ?string { return 'heroicon-o-calendar-days'; }
+    public static function getNavigationGroup(): ?string { return __('Billing & Revenue'); }
+    public static function getNavigationLabel(): string { return __('Subscriptions'); }
 
     public static function form(Schema $schema): Schema
     {

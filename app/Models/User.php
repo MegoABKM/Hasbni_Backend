@@ -50,7 +50,18 @@ class User extends Authenticatable implements FilamentUser
     public function supplierPayments() { return $this->hasMany(SupplierPayment::class); }
     public function payments() { return $this->hasMany(Payment::class); }
     public function auditLogs() { return $this->hasMany(AuditLog::class)->latest(); }
-    
-    // 👈 السطر الجديد الخاص بالدعم الفني
     public function supportTickets() { return $this->hasMany(SupportTicket::class)->latest(); }
+
+    // 🚀 الدالة الجديدة لفرز أصحاب باقة الإنتربرايز 🚀
+    public function hasRealtimeSyncFeature(): bool
+    {
+        if (!$this->subscription || $this->subscription->status !== 'active') return false;
+
+        $plan = $this->subscription->plan;
+        if (!$plan) return false;
+
+        $features = is_string($plan->features) ? json_decode($plan->features, true) : $plan->features;
+
+        return isset($features['full_inventory_sync']) && ($features['full_inventory_sync'] === true || $features['full_inventory_sync'] === 'true');
+    }
 }

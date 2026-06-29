@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use App\Models\Partner;
 use App\Models\PartnerGood;
 use App\Models\PartnershipRecord;
+use App\Events\ShopDataUpdated;
 
 class PartnershipController extends Controller {
     
@@ -38,42 +39,75 @@ class PartnershipController extends Controller {
 
     public function syncPartner(Request $request) {
         $data = $request->validate(['name' => 'required', 'profit_share_percentage' => 'required']);
-        
-        // Anti-Duplication
-        $partner = $request->user()->partners()->firstOrCreate(
+        $user = $request->user();
+
+        $partner = $user->partners()->firstOrCreate(
             ['name' => $data['name']], 
             ['profit_share_percentage' => $data['profit_share_percentage']]
         );
         
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+        }
+
         return response()->json(['id' => $partner->id]);
     }
 
     public function updatePartner(Request $request, $id) {
-        $request->user()->partners()->findOrFail($id)->update($request->only(['name', 'profit_share_percentage']));
+        $user = $request->user();
+        $user->partners()->findOrFail($id)->update($request->only(['name', 'profit_share_percentage']));
+        
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+        }
+
         return response()->json(true);
     }
 
     public function deletePartner(Request $request, $id) {
-        $request->user()->partners()->findOrFail($id)->delete();
+        $user = $request->user();
+        $user->partners()->findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+        }
+
         return response()->json(true);
     }
 
     public function syncGood(Request $request) {
-        // Anti-Duplication
+        $user = $request->user();
         $good = PartnerGood::firstOrCreate(
             ['partner_id' => $request->partner_id, 'name' => $request->name],
             ['cost_price' => $request->cost_price]
         );
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+        }
+
         return response()->json(['id' => $good->id]);
     }
 
     public function updateGood(Request $request, $id) {
+        $user = $request->user();
         PartnerGood::findOrFail($id)->update($request->only(['name', 'cost_price']));
+        
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+        }
+
         return response()->json(true);
     }
 
-    public function deleteGood($id) {
+    public function deleteGood(Request $request, $id) {
+        $user = $request->user();
         PartnerGood::findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+        }
+
         return response()->json(true);
     }
 
@@ -87,12 +121,13 @@ class PartnershipController extends Controller {
             'cost_price_at_sale' => 'required|numeric',
         ]);
 
+        $user = $request->user();
+
         $record = PartnershipRecord::firstOrCreate([
-            'user_id' => $request->user()->id,
+            'user_id' => $user->id,
             'record_date' => $request->record_date,
         ]);
 
-        // Anti-Duplication for Items
         $item = $record->items()->firstOrCreate(
             [
                 'partner_good_id' => $request->good_id,
@@ -104,11 +139,21 @@ class PartnershipController extends Controller {
             ]
         );
 
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_record_updated'));
+        }
+
         return response()->json(['id' => $record->id, 'item_id' => $item->id]);
     }
 
-    public function deleteRecordItem($id) {
+    public function deleteRecordItem(Request $request, $id) {
+        $user = $request->user();
         \App\Models\PartnershipRecordItem::findOrFail($id)->delete();
+
+        if ($user->hasRealtimeSyncFeature()) {
+            event(new ShopDataUpdated($user->id, 'partnership_record_updated'));
+        }
+
         return response()->json(true);
     }
 }

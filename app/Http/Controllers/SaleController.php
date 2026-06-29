@@ -5,6 +5,7 @@ use App\Models\Sale;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Events\ShopDataUpdated;
 
 class SaleController extends Controller
 {
@@ -18,29 +19,45 @@ class SaleController extends Controller
         return $request->user()->sales()->with('items')->findOrFail($id);
     }
 
-    public function store(Request $request) {
-        $saleId = $this->executeStore($request->user(), $request->all());
+   public function store(Request $request) {
+        $user = $request->user();
+        $saleId = $this->executeStore($user, $request->all());
+        
+        if ($user->hasRealtimeSyncFeature()) {
+            // 🚀 جلب الفاتورة مع عناصرها وإرسالها بالكامل
+            $sale = \App\Models\Sale::with('items')->find($saleId);
+            event(new ShopDataUpdated($user->id, 'sale_created', $sale->toArray()));
+        }
+
         return response()->json(['id' => $saleId]);
     }
-
     public function processReturn(Request $request) {
         $request->validate([
             'p_return_quantity' => 'required|integer|min:1'
         ]);
         
+        $user = $request->user();
         $isVoid = $request->p_is_void ?? false;
         $deductionAmount = $request->p_deduction_amount ?? null;
 
-        // 🚨 التعديل الجذري: لا نتجاهل الطلب إذا كان ناقصاً، بل نعيد خطأ ليحتفظ به التطبيق ويحاول لاحقاً
         if ($request->has('p_sale_item_id') && $request->p_sale_item_id != null) {
-            $this->executeReturn($request->user(), $request->p_sale_item_id, $request->p_return_quantity, $isVoid, $deductionAmount);
+            $this->executeReturn($user, $request->p_sale_item_id, $request->p_return_quantity, $isVoid, $deductionAmount);
+            
+            if ($user->hasRealtimeSyncFeature()) {
+                event(new ShopDataUpdated($user->id, 'sale_returned'));
+            }
+            
             return response()->json(true);
         } elseif ($request->has('p_sale_id') && $request->p_sale_id != null && $request->has('p_product_id') && $request->p_product_id != null) {
-            $this->executeReturnBySaleAndProduct($request->user(), $request->p_sale_id, $request->p_product_id, $request->p_return_quantity, $isVoid, $deductionAmount);
+            $this->executeReturnBySaleAndProduct($user, $request->p_sale_id, $request->p_product_id, $request->p_return_quantity, $isVoid, $deductionAmount);
+            
+            if ($user->hasRealtimeSyncFeature()) {
+                event(new ShopDataUpdated($user->id, 'sale_returned'));
+            }
+            
             return response()->json(true);
         }
         
-        // إذا فشل في إيجاد المعرفات، نرفض الطلب لكي لا يضيع من طابور المزامنة في الهاتف
         return response()->json(['message' => 'Missing server IDs. Will retry later.'], 400);
     }
 
@@ -74,6 +91,10 @@ class SaleController extends Controller
 
             $newSale = Sale::find($newSaleId);
             $priceDiff = $newSale->total_price - $returnedValueLocal; 
+
+            if ($user->hasRealtimeSyncFeature()) {
+                event(new ShopDataUpdated($user->id, 'sale_exchanged'));
+            }
 
             return response()->json([
                 'new_sale_id' => $newSaleId,
@@ -117,11 +138,10 @@ class SaleController extends Controller
                 ];
             }
 
-            // 🚨 التعديل هنا: إضافة invoice_number و has_returns للحفظ في السيرفر 🚨
             $saleData = [
                 'employee_id' => $data['p_employee_id'] ?? null,
                 'customer_id' => $data['p_customer_id'] ?? null,
-                'invoice_number' => $data['p_invoice_number'] ?? null, // 👈
+                'invoice_number' => $data['p_invoice_number'] ?? null, 
                 'total_price' => $data['p_total_price'] ?? 0, 
                 'total_profit' => $data['p_total_profit'] ?? 0, 
                 'currency_code' => $data['p_currency_code'],
@@ -134,7 +154,7 @@ class SaleController extends Controller
                 'tendered_currency' => $data['p_tendered_currency'] ?? null,
                 'change_amount' => $data['p_change_amount'] ?? 0,
                 'change_currency' => $data['p_change_currency'] ?? null,
-                'has_returns' => $data['p_has_returns'] ?? false, // 👈
+                'has_returns' => $data['p_has_returns'] ?? false, 
             ];
 
             if ($clientCreatedAt) {
@@ -164,7 +184,6 @@ class SaleController extends Controller
 
     private function executeReturnBySaleAndProduct($user, $saleId, $productId, $returnQty, $isVoid, $deductionAmount) {
         return DB::transaction(function () use ($user, $saleId, $productId, $returnQty, $isVoid, $deductionAmount) {
-            // 🚨 إصلاح للـ SQL Ambiguous Column بجعلها صريحة sale_id
             $saleItem = \App\Models\SaleItem::where('sale_id', $saleId)
                 ->where('product_id', $productId)
                 ->whereHas('sale', function($q) use ($user) {
@@ -205,7 +224,7 @@ class SaleController extends Controller
         $profitReductionUsd = (($saleItem->price_at_sale / $rate) - $saleItem->cost_price_at_sale) * $returnQty;
 
         $sale->total_profit -= $profitReductionUsd;
-        $sale->has_returns = true; // 👈 🚀 إضافة هذه العلامة للسيرفر 🚀
+        $sale->has_returns = true; 
         
         if ($isVoid || $sale->total_price <= 0.01) { 
             $sale->total_price = 0;

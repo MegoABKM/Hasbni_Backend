@@ -16,17 +16,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // 1. حماية الـ API العام (60 طلب في الدقيقة لكل IP) لمنع هجمات الـ DDoS
+        // 1. حماية الـ API العام
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
-        // 2. حماية مسار تسجيل الدخول بصرامة (5 محاولات في الدقيقة فقط لكل IP)
+        // 2. حماية مسار تسجيل الدخول بصرامة
         RateLimiter::for('login', function (Request $request) {
             return Limit::perMinute(5)->by($request->ip());
         });
 
-        // 3. حماية العمليات المالية (منع النقر المزدوج السريع لهندسة ثغرات السباق Race Conditions)
+        // 3. حماية العمليات المالية
         RateLimiter::for('financial_operations', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });

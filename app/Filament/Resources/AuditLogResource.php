@@ -16,15 +16,9 @@ class AuditLogResource extends Resource
 {
     protected static ?string $model = AuditLog::class;
 
-    public static function getNavigationIcon(): string
-    {
-        return 'heroicon-o-shield-check';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'System Settings';
-    }
+   public static function getNavigationIcon(): string { return 'heroicon-o-shield-check'; }
+    public static function getNavigationGroup(): ?string { return __('System Settings'); }
+    public static function getNavigationLabel(): string { return __('Audit Logs'); }
 
     // 🔒 منع الإضافة (السجلات تُنشأ برمجياً فقط)
     public static function canCreate(): bool

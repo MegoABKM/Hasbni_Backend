@@ -24,7 +24,7 @@ use App\Filament\Widgets\PlanStatsWidget;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\SystemOverviewWidget;
 use App\Filament\Widgets\SaaSMetricsWidget; // 👈 هذا هو السطر الذي كان مفقوداً
-
+use App\Http\Middleware\SetLocale;
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -51,7 +51,7 @@ class AdminPanelProvider extends PanelProvider
                 PlanStatsWidget::class,
                 RevenueChart::class, 
             ])
-            ->middleware([
+                ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -61,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetLocale::class, // 👈 أضفنا هذا السطر هنا ليقرأ اللغة فوراً
             ])
             ->authMiddleware([
                 Authenticate::class,

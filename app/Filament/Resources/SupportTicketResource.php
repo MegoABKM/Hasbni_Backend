@@ -18,8 +18,8 @@ class SupportTicketResource extends Resource
 {
     protected static ?string $model = SupportTicket::class;
     public static function getNavigationIcon(): string { return 'heroicon-o-ticket'; }
-    public static function getNavigationGroup(): ?string { return 'Support & Help'; }
-    public static function getNavigationLabel(): string { return 'Support Tickets (تذاكر الدعم)'; }
+   public static function getNavigationGroup(): ?string { return __('Support & Help'); }
+    public static function getNavigationLabel(): string { return __('Support Tickets'); }
 
     // منع الإضافة من الإدارة (لأنها تأتي من المستخدمين فقط)
     public static function canCreate(): bool { return false; }

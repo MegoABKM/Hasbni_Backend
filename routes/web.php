@@ -1,14 +1,13 @@
 <?php
+// c:\Users\LEGION\bhasbni\routes\web.php
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Response;
 
 // 1. مسار تحميل الشهادة
 Route::get('/get-cert', function () {
-    // 🚨 تم تصحيح اسم المجلد من downloads إلى download ليتطابق مع مجلدك
     $file = public_path('download/hasbni.pfx');
     
-    // التحقق من وجود الملف لتجنب ظهور صفحة خطأ 500
     if (!file_exists($file)) {
         abort(404, 'عذراً، ملف الشهادة غير موجود في السيرفر.');
     }
@@ -18,7 +17,7 @@ Route::get('/get-cert', function () {
     ]);
 });
 
-// 2. 🚨 مسار تحميل التطبيق (الذي كان مفقوداً) 🚨
+// 2. مسار تحميل التطبيق
 Route::get('/get-app', function () {
     $file = public_path('download/hasbni.msix');
     
@@ -43,3 +42,11 @@ Route::get('/clear-cache', function() {
     }
     return '✅ تم مسح الكاش بنجاح! السيرفر الآن سيقرأ الأكواد الجديدة.';
 });
+
+// 🚀 4. المسار المسؤول عن تبديل اللغة (هذا الذي كان مفقوداً) 🚀
+Route::get('switch-language/{locale}', function ($locale) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session()->put('locale', $locale);
+    }
+    return redirect()->back();
+})->name('switch-language');

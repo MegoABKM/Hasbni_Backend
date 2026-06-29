@@ -17,9 +17,8 @@ class FaqResource extends Resource
 {
     protected static ?string $model = Faq::class;
     public static function getNavigationIcon(): string { return 'heroicon-o-question-mark-circle'; }
-    public static function getNavigationGroup(): ?string { return 'Support & Help'; }
-    public static function getNavigationLabel(): string { return 'FAQs (الأسئلة الشائعة)'; }
-
+  public static function getNavigationGroup(): ?string { return __('Support & Help'); }
+    public static function getNavigationLabel(): string { return __('FAQs'); }
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
