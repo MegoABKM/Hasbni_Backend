@@ -17,8 +17,9 @@ class InventoryController extends Controller
     {
         $user = $request->user();
         $responses = [];
+        $syncedMovements = [];
 
-        DB::transaction(function () use ($user, $request, &$responses) {
+        DB::transaction(function () use ($user, $request, &$responses, &$syncedMovements) {
             if ($request->has('movements') && is_array($request->movements)) {
                 foreach ($request->movements as $mov) {
                     
@@ -40,12 +41,14 @@ class InventoryController extends Controller
                         'local_id' => $mov['local_id'],
                         'server_id' => $record->id
                     ];
+                    $syncedMovements[] = $record->toArray();
                 }
             }
         });
 
-        if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'inventory_synced'));
+        if ($user->hasRealtimeSyncFeature() && !empty($syncedMovements)) {
+             // 🚀 إرسال الحركات بالكامل للموبايل
+            event(new ShopDataUpdated($user->id, 'inventory_synced', $syncedMovements));
         }
 
         return response()->json(['success' => true, 'synced' => $responses]);

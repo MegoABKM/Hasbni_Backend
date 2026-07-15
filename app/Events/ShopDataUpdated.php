@@ -14,13 +14,16 @@ class ShopDataUpdated implements ShouldBroadcastNow
 
     public $userId;
     public $updateType;
-    public $payload; // 👈 هذا سيحمل مصفوفة البيانات بالكامل
+    public $payload; 
+    public $senderDeviceId; // 👈 إضافة هذا الحقل لحل مشكلة التكرار
 
     public function __construct($userId, $updateType, $payload = [])
     {
         $this->userId = $userId;
         $this->updateType = $updateType;
         $this->payload = $payload;
+        // 👈 الحصول عليه تلقائياً من طلب الموبايل الأصلي (X-Device-ID)
+        $this->senderDeviceId = request()->header('X-Device-ID'); 
     }
 
     public function broadcastOn(): array

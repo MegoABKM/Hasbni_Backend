@@ -28,7 +28,7 @@ class SupplierController extends Controller
         $supplier = $user->suppliers()->create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_created'));
+            event(new ShopDataUpdated($user->id, 'supplier_created', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return $supplier;
@@ -46,7 +46,7 @@ class SupplierController extends Controller
         $supplier->update($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_updated'));
+            event(new ShopDataUpdated($user->id, 'supplier_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['success' => true, 'supplier' => $supplier]);
@@ -57,7 +57,7 @@ class SupplierController extends Controller
         $user->suppliers()->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_deleted'));
+            event(new ShopDataUpdated($user->id, 'supplier_deleted', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['success' => true]);
@@ -90,7 +90,7 @@ class SupplierController extends Controller
         ]);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_payment_synced'));
+            event(new ShopDataUpdated($user->id, 'supplier_payment_synced', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['id' => $payment->id]);

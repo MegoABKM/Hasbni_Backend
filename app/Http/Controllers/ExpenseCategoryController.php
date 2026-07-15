@@ -21,7 +21,7 @@ class ExpenseCategoryController extends Controller
         $category = $user->expenseCategories()->create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'expense_category_created'));
+            event(new ShopDataUpdated($user->id, 'expense_category_created', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return $category;
@@ -32,7 +32,7 @@ class ExpenseCategoryController extends Controller
          $user->expenseCategories()->findOrFail($id)->delete();
 
          if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'expense_category_deleted'));
+            event(new ShopDataUpdated($user->id, 'expense_category_deleted', [], $request->header('X-Device-ID'))); // 👈
          }
 
          return response()->json(['success'=>true]);

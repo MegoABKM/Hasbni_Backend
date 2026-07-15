@@ -30,5 +30,15 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('financial_operations', function (Request $request) {
             return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
         });
+
+        // 4. ربط المراقب (Observer) بالموديلات تلقائياً عبر المسار الكامل
+        \App\Models\Product::observe(\App\Observers\SyncObserver::class);
+        \App\Models\Sale::observe(\App\Observers\SyncObserver::class);
+        \App\Models\Customer::observe(\App\Observers\SyncObserver::class);
+        \App\Models\Supplier::observe(\App\Observers\SyncObserver::class);
+        \App\Models\Expense::observe(\App\Observers\SyncObserver::class);
+        
+        // 🚀 تم التعديل هنا إلى الموديل الصحيح في مشروعك
+        \App\Models\OwnerWithdrawal::observe(\App\Observers\SyncObserver::class);
     }
 }

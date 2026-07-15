@@ -33,7 +33,7 @@ class OwnerWithdrawalController extends Controller {
         $withdrawal = $user->withdrawals()->create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'withdrawal_created'));
+            event(new ShopDataUpdated($user->id, 'withdrawal_created', $withdrawal->toArray(), $request->header('X-Device-ID')));
         }
 
         return $withdrawal;
@@ -52,7 +52,7 @@ class OwnerWithdrawalController extends Controller {
         $user->withdrawals()->findOrFail($id)->update($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'withdrawal_updated'));
+            event(new ShopDataUpdated($user->id, 'withdrawal_updated', [], $request->header('X-Device-ID')));
         }
 
         return response()->json(['success'=>true]);
@@ -63,7 +63,7 @@ class OwnerWithdrawalController extends Controller {
         $user->withdrawals()->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'withdrawal_deleted'));
+            event(new ShopDataUpdated($user->id, 'withdrawal_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['success'=>true]);

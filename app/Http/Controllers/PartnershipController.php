@@ -47,7 +47,7 @@ class PartnershipController extends Controller {
         );
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['id' => $partner->id]);
@@ -58,7 +58,7 @@ class PartnershipController extends Controller {
         $user->partners()->findOrFail($id)->update($request->only(['name', 'profit_share_percentage']));
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(true);
@@ -69,7 +69,7 @@ class PartnershipController extends Controller {
         $user->partners()->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(true);
@@ -83,7 +83,7 @@ class PartnershipController extends Controller {
         );
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['id' => $good->id]);
@@ -94,7 +94,7 @@ class PartnershipController extends Controller {
         PartnerGood::findOrFail($id)->update($request->only(['name', 'cost_price']));
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(true);
@@ -105,7 +105,7 @@ class PartnershipController extends Controller {
         PartnerGood::findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_good_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_good_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(true);
@@ -140,7 +140,7 @@ class PartnershipController extends Controller {
         );
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_record_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_record_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(['id' => $record->id, 'item_id' => $item->id]);
@@ -151,7 +151,7 @@ class PartnershipController extends Controller {
         \App\Models\PartnershipRecordItem::findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'partnership_record_updated'));
+            event(new ShopDataUpdated($user->id, 'partnership_record_updated', [], $request->header('X-Device-ID'))); // 👈
         }
 
         return response()->json(true);

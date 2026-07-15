@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Broadcast; // 👈 تم الاستيراد هنا بشكل نظيف لـ Laravel Echo
+use Illuminate\Support\Facades\Broadcast; 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
@@ -17,30 +17,19 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\SaaSController;
 use App\Http\Controllers\SupportController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
-
-// --------------------------------------------------------------------------
-// Public Routes (المسارات العامة المفتوحة للجميع)
-// --------------------------------------------------------------------------
+// مسارات عامة
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:login');
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
 Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:5,1');
 Route::post('/verify-email-registration', [AuthController::class, 'verifyEmailRegistration']);
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
-Route::get('/ping', function () {
-    return response()->json(['status' => 'online']);
-});
+Route::get('/ping', function () { return response()->json(['status' => 'online']); });
 
 Route::get('/plans', [SaaSController::class, 'getPlans']);
 Route::get('/announcements/active', [SaaSController::class, 'getActiveAnnouncement']);
 Route::post('/promo-codes/validate', [SaaSController::class, 'validatePromoCode']);
 
-// مسارات الدعم (العامة)
 Route::get('/support/faqs', [SupportController::class, 'faqs']);
 Route::get('/support/instructions', [SupportController::class, 'instructions']);
 
@@ -55,19 +44,18 @@ Route::get('/app-status', function() {
 Route::post('/webhooks/stripe', [\App\Http\Controllers\WebhookController::class, 'handleStripe']);
 Route::get('/webhooks/myfatoorah/callback', [\App\Http\Controllers\MyFatoorahController::class, 'callback']);
 
-// 🚨 تفعيل مسار المصادقة الخاص بـ Sanctum لقنوات البث (WebSockets / Reverb) لتطبيق الموبايل 🚨
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
-// --------------------------------------------------------------------------
-// Protected Routes (المسارات المحمية بـ Sanctum)
-// --------------------------------------------------------------------------
+// مسارات محمية لجميع المستخدمين (مدير وكاشير)
 Route::middleware('auth:sanctum')->group(function () {
     
-    // مسارات التذاكر (المحمية)
-    Route::get('/support/tickets', [SupportController::class, 'myTickets']);
-    Route::post('/support/tickets', [SupportController::class, 'createTicket'])->middleware('throttle:3,1'); // حماية من السبام
-    
+    // 🚀 المسارات التي تم إخراجها لتعمل مع الكاشير والمدير بشكل سليم
+    Route::get('/sync/delta', [\App\Http\Controllers\SyncController::class, 'delta']);
     Route::post('/fcm-token', [\App\Http\Controllers\FcmController::class, 'updateToken']);
+
+    Route::get('/support/tickets', [SupportController::class, 'myTickets']);
+    Route::post('/support/tickets', [SupportController::class, 'createTicket'])->middleware('throttle:3,1'); 
+    
     Route::post('/pay/myfatoorah', [\App\Http\Controllers\MyFatoorahController::class, 'checkout']);
     Route::get('/my-subscription', [SaaSController::class, 'mySubscription']);
     Route::get('/user', function (Request $request) { return $request->user(); });
@@ -112,6 +100,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/suppliers/{id}/payments', [App\Http\Controllers\SupplierController::class, 'storePayment']);
     Route::get('/supplier_payments', [App\Http\Controllers\SupplierController::class, 'getPayments']);
     
+    Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync'])->middleware('throttle:financial_operations');
+    Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']);
+    
+    Route::post('/verify-google-play', [\App\Http\Controllers\GooglePlayController::class, 'verifyPurchase']);
+
+    // 🚀 مسارات حصرية للمدير فقط 🚀
     Route::middleware(['manager'])->group(function () {
         Route::get('/audit-logs', [\App\Http\Controllers\AuditLogController::class, 'index']);
         Route::apiResource('products', ProductController::class)->except(['index']);
@@ -119,9 +113,4 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('owner_withdrawals', OwnerWithdrawalController::class);
         Route::post('/rpc/get_financial_summary', [ReportsController::class, 'summary']);
     });
-    
-    Route::post('/cash/sync', [\App\Http\Controllers\CashController::class, 'sync'])->middleware('throttle:financial_operations');
-    Route::get('/cash/drawers', [\App\Http\Controllers\CashController::class, 'getDrawers']);
-    
-    Route::post('/verify-google-play', [\App\Http\Controllers\GooglePlayController::class, 'verifyPurchase']);
 });

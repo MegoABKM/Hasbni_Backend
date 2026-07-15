@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -29,7 +28,7 @@ class ProductCategoryController extends Controller
             ]);
             
             if ($user->hasRealtimeSyncFeature()) {
-                event(new ShopDataUpdated($user->id, 'product_category_updated'));
+                event(new ShopDataUpdated($user->id, 'product_category_updated', $existing->toArray(), $request->header('X-Device-ID')));
             }
             return $existing;
         }
@@ -38,7 +37,7 @@ class ProductCategoryController extends Controller
         $category = ProductCategory::create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_category_created'));
+            event(new ShopDataUpdated($user->id, 'product_category_created', $category->toArray(), $request->header('X-Device-ID')));
         }
 
         return $category;
@@ -56,7 +55,7 @@ class ProductCategoryController extends Controller
         $category->update($validated);
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_category_updated'));
+            event(new ShopDataUpdated($user->id, 'product_category_updated', $category->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json($category);
@@ -67,7 +66,7 @@ class ProductCategoryController extends Controller
         $user->productCategories()->findOrFail($id)->delete();
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_category_deleted'));
+            event(new ShopDataUpdated($user->id, 'product_category_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['success'=>true]);

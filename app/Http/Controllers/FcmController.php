@@ -1,20 +1,29 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\FcmToken;
 
 class FcmController extends Controller
 {
     public function updateToken(Request $request)
     {
         $request->validate([
-            'fcm_token' => 'required|string'
+            'device_id' => 'required|string',
+            'token' => 'required|string'
         ]);
 
-        $request->user()->update([
-            'fcm_token' => $request->fcm_token
-        ]);
+        FcmToken::updateOrCreate(
+            [
+                'user_id' => $request->user()->id, 
+                'device_id' => $request->device_id
+            ],
+            [
+                'token' => $request->token
+            ]
+        );
 
-        return response()->json(['success' => true, 'message' => 'Token updated']);
+        return response()->json(['success' => true]);
     }
 }

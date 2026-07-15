@@ -42,7 +42,6 @@ class ProductController extends Controller
         $clientCreatedAt = $request->created_at ? \Carbon\Carbon::parse($request->created_at)->format('Y-m-d H:i:s') : null;
         $user = $request->user();
 
-        // حماية من التكرار (Anti-Duplication)
         if ($clientCreatedAt) {
             $existing = $user->products()
                 ->where('name', $validated['name'])
@@ -55,12 +54,11 @@ class ProductController extends Controller
             $validated['updated_at'] = $clientCreatedAt;
         }
 
-        // إنشاء المنتج
         $product = $user->products()->create($validated);
 
-        // 🚀 إرسال المنتج بالكامل في الـ Payload لمشتركي الإنتربرايز
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_created', $product->toArray()));
+            // 🚨 التعديل هنا: إرسال معرف الجهاز
+            event(new ShopDataUpdated($user->id, 'product_created', $product->toArray(), $request->header('X-Device-ID')));
         }
 
         return $product;
@@ -83,12 +81,11 @@ class ProductController extends Controller
             'supplier_id' => 'nullable|integer',
         ]);
 
-        // تحديث المنتج
         $product->update($validated);
 
-        // 🚀 إرسال التحديث بالكامل في الـ Payload
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_updated', $product->toArray()));
+            // 🚨 التعديل هنا: إرسال معرف الجهاز
+            event(new ShopDataUpdated($user->id, 'product_updated', $product->toArray(), $request->header('X-Device-ID')));
         }
 
         return $product;
@@ -98,9 +95,9 @@ class ProductController extends Controller
         $user = $request->user();
         $user->products()->findOrFail($id)->delete();
 
-        // 🚀 إرسال الـ ID فقط للحذف ليقوم الموبايل بحذفه محلياً
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'product_deleted', ['id' => $id]));
+            // 🚨 التعديل هنا: إرسال معرف الجهاز
+            event(new ShopDataUpdated($user->id, 'product_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['message' => 'Deleted']);

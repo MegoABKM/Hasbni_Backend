@@ -1,8 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\Product;
+use App\Models\SaleItem;
+use App\Models\InventoryMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Events\ShopDataUpdated;
@@ -19,18 +22,91 @@ class SaleController extends Controller
         return $request->user()->sales()->with('items')->findOrFail($id);
     }
 
-   public function store(Request $request) {
+    public function store(Request $request)
+    {
         $user = $request->user();
-        $saleId = $this->executeStore($user, $request->all());
-        
-        if ($user->hasRealtimeSyncFeature()) {
-            // 🚀 جلب الفاتورة مع عناصرها وإرسالها بالكامل
-            $sale = \App\Models\Sale::with('items')->find($saleId);
-            event(new ShopDataUpdated($user->id, 'sale_created', $sale->toArray()));
-        }
+        $senderDeviceId = $request->header('X-Device-ID');
 
-        return response()->json(['id' => $saleId]);
+        DB::beginTransaction();
+        try {
+            $sale = Sale::create([
+                'user_id' => $user->id,
+                'invoice_number' => $request->p_invoice_number,
+                'total_price' => $request->p_total_price,
+                'total_profit' => $request->p_total_profit,
+                'payment_status' => $request->p_payment_status,
+                'currency_code' => $request->p_currency_code ?? 'USD',
+                'rate_to_usd_at_sale' => $request->p_rate_to_usd_at_sale ?? 1.0,
+                'employee_id' => $request->p_employee_id,
+                'customer_id' => $request->p_customer_id,
+                'discount_amount' => $request->p_discount_amount ?? 0,
+                'tax_amount' => $request->p_tax_amount ?? 0,
+                'paid_amount' => $request->p_paid_amount ?? 0,
+                'tendered_amount' => $request->p_tendered_amount ?? 0,
+                'tendered_currency' => $request->p_tendered_currency,
+                'change_amount' => $request->p_change_amount ?? 0,
+                'change_currency' => $request->p_change_currency,
+                'has_returns' => $request->p_has_returns ?? false,
+                'created_at' => $request->p_created_at ?? now(),
+            ]);
+
+            foreach ($request->p_sale_items_data as $itemData) {
+                // 🚨 منع تضارب المخزون بـ LockForUpdate
+                $product = Product::where('id', $itemData['product_id'])->lockForUpdate()->first();
+                
+                if ($product) {
+                    $oldQty = $product->quantity;
+                    $product->quantity -= $itemData['quantity'];
+                    $product->save(); 
+
+                    SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $product->id,
+                        'quantity' => $itemData['quantity'],
+                        'price' => $itemData['price'],
+                        'returned_quantity' => $itemData['returned_quantity'] ?? 0,
+                        'cost_price_at_sale' => $product->cost_price,
+                    ]);
+
+                    InventoryMovement::create([
+                        'user_id' => $user->id,
+                        'product_id' => $product->id,
+                        'movement_type' => 'sale_out',
+                        'quantity_change' => -$itemData['quantity'],
+                        'current_balance' => $product->quantity,
+                        'reference_id' => $sale->id,
+                    ]);
+
+                    // 🚨 حل تضارب المبيعات الاوفلاين
+                    if ($product->quantity < 0 && $oldQty >= 0) {
+                        InventoryMovement::create([
+                            'user_id' => $user->id,
+                            'product_id' => $product->id,
+                            'movement_type' => 'negative_stock_adjustment',
+                            'quantity_change' => $product->quantity, 
+                            'current_balance' => $product->quantity,
+                            'reference_id' => $sale->id,
+                            'cost_price_at_time' => $product->cost_price,
+                        ]);
+                    }
+
+                    broadcast(new ShopDataUpdated($user->id, 'product_updated', $product->toArray(), $senderDeviceId));
+                }
+            }
+
+            DB::commit();
+
+            $sale->load('items');
+            broadcast(new ShopDataUpdated($user->id, 'sale_created', $sale->toArray(), $senderDeviceId));
+
+            return response()->json($sale, 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
+
     public function processReturn(Request $request) {
         $request->validate([
             'p_return_quantity' => 'required|integer|min:1'
@@ -39,25 +115,22 @@ class SaleController extends Controller
         $user = $request->user();
         $isVoid = $request->p_is_void ?? false;
         $deductionAmount = $request->p_deduction_amount ?? null;
+        $saleId = null;
 
         if ($request->has('p_sale_item_id') && $request->p_sale_item_id != null) {
-            $this->executeReturn($user, $request->p_sale_item_id, $request->p_return_quantity, $isVoid, $deductionAmount);
-            
-            if ($user->hasRealtimeSyncFeature()) {
-                event(new ShopDataUpdated($user->id, 'sale_returned'));
-            }
-            
-            return response()->json(true);
+            $saleId = $this->executeReturn($user, $request->p_sale_item_id, $request->p_return_quantity, $isVoid, $deductionAmount);
         } elseif ($request->has('p_sale_id') && $request->p_sale_id != null && $request->has('p_product_id') && $request->p_product_id != null) {
-            $this->executeReturnBySaleAndProduct($user, $request->p_sale_id, $request->p_product_id, $request->p_return_quantity, $isVoid, $deductionAmount);
-            
-            if ($user->hasRealtimeSyncFeature()) {
-                event(new ShopDataUpdated($user->id, 'sale_returned'));
-            }
-            
-            return response()->json(true);
+            $saleId = $this->executeReturnBySaleAndProduct($user, $request->p_sale_id, $request->p_product_id, $request->p_return_quantity, $isVoid, $deductionAmount);
         }
         
+        if ($saleId) {
+            if ($user->hasRealtimeSyncFeature()) {
+                $updatedSale = \App\Models\Sale::with('items')->find($saleId);
+                event(new ShopDataUpdated($user->id, 'sale_updated', $updatedSale->toArray(), $request->header('X-Device-ID'))); 
+            }
+            return response()->json(true);
+        }
+
         return response()->json(['message' => 'Missing server IDs. Will retry later.'], 400);
     }
 
@@ -65,7 +138,7 @@ class SaleController extends Controller
         return DB::transaction(function () use ($request) {
             $user = $request->user();
             
-            $this->executeReturn($user, $request->p_sale_item_id_to_return, $request->p_return_quantity, false, null);
+            $oldSaleId = $this->executeReturn($user, $request->p_sale_item_id_to_return, $request->p_return_quantity, false, null);
             
             $returnedItem = \App\Models\SaleItem::find($request->p_sale_item_id_to_return);
             $returnedValueLocal = $returnedItem ? ($returnedItem->price_at_sale * $request->p_return_quantity) : 0;
@@ -93,7 +166,12 @@ class SaleController extends Controller
             $priceDiff = $newSale->total_price - $returnedValueLocal; 
 
             if ($user->hasRealtimeSyncFeature()) {
-                event(new ShopDataUpdated($user->id, 'sale_exchanged'));
+                if ($oldSaleId) {
+                    $oldSale = \App\Models\Sale::with('items')->find($oldSaleId);
+                    event(new ShopDataUpdated($user->id, 'sale_updated', $oldSale->toArray(), $request->header('X-Device-ID')));
+                }
+                $newSaleObj = \App\Models\Sale::with('items')->find($newSaleId);
+                event(new ShopDataUpdated($user->id, 'sale_created', $newSaleObj->toArray(), $request->header('X-Device-ID')));
             }
 
             return response()->json([
@@ -175,10 +253,9 @@ class SaleController extends Controller
                 $q->where('user_id', $user->id);
             })->where('id', $saleItemId)->first();
 
-            if (!$saleItem) return true; 
+            if (!$saleItem) return null; 
 
-            $this->applyReturnLogic($saleItem, $returnQty, $isVoid, $deductionAmount);
-            return true;
+            return $this->applyReturnLogic($saleItem, $returnQty, $isVoid, $deductionAmount);
         });
     }
 
@@ -190,10 +267,9 @@ class SaleController extends Controller
                     $q->where('user_id', $user->id);
                 })->first();
 
-            if (!$saleItem) return true; 
+            if (!$saleItem) return null; 
 
-            $this->applyReturnLogic($saleItem, $returnQty, $isVoid, $deductionAmount);
-            return true;
+            return $this->applyReturnLogic($saleItem, $returnQty, $isVoid, $deductionAmount);
         });
     }
 
@@ -203,7 +279,7 @@ class SaleController extends Controller
             $returnQty = $availableToReturn;
         }
         
-        if ($returnQty <= 0) return;
+        if ($returnQty <= 0) return $saleItem->sale_id;
         
         $saleItem->increment('returned_quantity', $returnQty);
         
@@ -235,5 +311,6 @@ class SaleController extends Controller
         }
         
         $sale->save();
+        return $sale->id;
     }
 }

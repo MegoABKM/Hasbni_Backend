@@ -20,19 +20,13 @@ class CustomerController extends Controller
         ]);
 
         $user = $request->user();
-
-        // حماية من التكرار عبر الاسم (Anti-Duplication)
         $existing = $user->customers()->where('name', $validated['name'])->first();
-        if ($existing) {
-            return $existing;
-        }
+        if ($existing) return $existing;
 
-        // إنشاء العميل
         $customer = $user->customers()->create($validated);
 
-        // 🚀 إرسال بيانات العميل بالكامل لمشتركي الإنتربرايز
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'customer_created', $customer->toArray()));
+            event(new ShopDataUpdated($user->id, 'customer_created', $customer->toArray(), $request->header('X-Device-ID')));
         }
 
         return $customer;
@@ -47,13 +41,10 @@ class CustomerController extends Controller
 
         $user = $request->user();
         $customer = $user->customers()->findOrFail($id);
-        
-        // تحديث بيانات العميل
         $customer->update($validated);
 
-        // 🚀 إرسال التحديث بالكامل للموبايل
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'customer_updated', $customer->toArray()));
+            event(new ShopDataUpdated($user->id, 'customer_updated', $customer->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json(['success' => true, 'customer' => $customer]);
@@ -63,9 +54,8 @@ class CustomerController extends Controller
         $user = $request->user();
         $user->customers()->findOrFail($id)->delete();
 
-        // 🚀 إرسال طلب الحذف للموبايل
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'customer_deleted', ['id' => $id]));
+            event(new ShopDataUpdated($user->id, 'customer_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['success' => true]);
@@ -81,15 +71,8 @@ class CustomerController extends Controller
         $customer = $user->customers()->findOrFail($id);
         $clientDate = Carbon::parse($validated['payment_date'])->format('Y-m-d H:i:s');
 
-        // حماية من تكرار تسجيل الدفعة (Anti-Duplication for Payments)
-        $existing = $customer->payments()
-            ->where('amount', $validated['amount'])
-            ->where('payment_date', $clientDate)
-            ->first();
-
-        if ($existing) {
-            return response()->json(['id' => $existing->id]);
-        }
+        $existing = $customer->payments()->where('amount', $validated['amount'])->where('payment_date', $clientDate)->first();
+        if ($existing) return response()->json(['id' => $existing->id]);
 
         $payment = $customer->payments()->create([
             'amount' => $validated['amount'],
@@ -98,9 +81,8 @@ class CustomerController extends Controller
             'updated_at' => $clientDate,
         ]);
 
-        // 🚀 إعلام التطبيق بوجود دفعة جديدة (سيقوم بتحديث الأرقام الصعبة تلقائياً)
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'customer_payment_synced', $payment->toArray()));
+            event(new ShopDataUpdated($user->id, 'customer_payment_synced', $payment->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json(['id' => $payment->id]);

@@ -2,14 +2,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model {
-    use \App\Traits\Auditable;
+    use SoftDeletes, \App\Traits\Auditable;
 
-    // السماح بإدخال جميع الحقول بما فيها invoice_number
     protected $guarded = [];
 
-    // إجبار Laravel على تحويل الأنواع بدقة عند إرسالها للتطبيق (مهم جداً للمزامنة)
     protected $casts = [
         'has_returns' => 'boolean',
         'total_price' => 'float',
@@ -20,14 +19,9 @@ class Sale extends Model {
         'tendered_amount' => 'float',
         'change_amount' => 'float',
         'rate_to_usd_at_sale' => 'float',
-        'invoice_number' => 'string', // 👈 التأكيد على أنه نص
+        'invoice_number' => 'string', 
     ];
     
-    public function items() {
-        return $this->hasMany(SaleItem::class);
-    }
-
-    public function customer() {
-        return $this->belongsTo(Customer::class);
-    }
+    public function items() { return $this->hasMany(SaleItem::class); }
+    public function customer() { return $this->belongsTo(Customer::class); }
 }

@@ -49,7 +49,7 @@ class ExpenseController extends Controller
         $expense = $user->expenses()->create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'expense_created'));
+            event(new ShopDataUpdated($user->id, 'expense_created', $expense->toArray(), $request->header('X-Device-ID')));
         }
 
         return $expense;
@@ -75,7 +75,7 @@ class ExpenseController extends Controller
         $user->expenses()->findOrFail($id)->update($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'expense_updated'));
+            event(new ShopDataUpdated($user->id, 'expense_updated', [], $request->header('X-Device-ID')));
         }
 
         return response()->json(['message' => 'Updated']);
@@ -86,7 +86,7 @@ class ExpenseController extends Controller
         $user->expenses()->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'expense_deleted'));
+            event(new ShopDataUpdated($user->id, 'expense_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['message' => 'Deleted']);

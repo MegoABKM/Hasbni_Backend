@@ -11,8 +11,9 @@ class CashController extends Controller
     public function sync(Request $request)
     {
         $user = $request->user();
+        $syncedTransactions = [];
         
-        DB::transaction(function () use ($user, $request) {
+        DB::transaction(function () use ($user, $request, &$syncedTransactions) {
             if ($request->has('drawers')) {
                 foreach ($request->drawers as $drawer) {
                     $user->cashDrawers()->updateOrCreate(
@@ -35,7 +36,7 @@ class CashController extends Controller
                         ->first();
 
                     if (!$existing) {
-                        $user->cashTransactions()->create([
+                        $tx = $user->cashTransactions()->create([
                             'transaction_type' => $t['transaction_type'],
                             'amount' => $t['amount'],
                             'currency_code' => $t['currency_code'],
@@ -45,13 +46,18 @@ class CashController extends Controller
                             'created_at' => $clientDate,
                             'updated_at' => $clientDate,
                         ]);
+                        $syncedTransactions[] = $tx->toArray();
                     }
                 }
             }
         });
         
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'cash_synced'));
+            // 🚀 إرسال الأرصدة والعمليات الجديدة بالكامل في البايلود
+            event(new ShopDataUpdated($user->id, 'cash_synced', [
+                'drawers' => $user->cashDrawers()->get(['currency_code', 'balance'])->toArray(),
+                'transactions' => $syncedTransactions
+            ]));
         }
 
         return response()->json(['success' => true]);
