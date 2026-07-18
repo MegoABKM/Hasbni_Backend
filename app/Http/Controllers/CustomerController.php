@@ -82,7 +82,7 @@ class CustomerController extends Controller
         ]);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'customer_payment_synced', $payment->toArray(), $request->header('X-Device-ID')));
+            event(new ShopDataUpdated($user->id, 'customer_payment_created', $payment->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json(['id' => $payment->id]);

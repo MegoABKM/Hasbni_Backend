@@ -62,8 +62,9 @@ class SaleController extends Controller
                     SaleItem::create([
                         'sale_id' => $sale->id,
                         'product_id' => $product->id,
-                        'quantity' => $itemData['quantity'],
-                        'price' => $itemData['price'],
+                        'product_name' => $product->name,
+                        'quantity_sold' => $itemData['quantity'],
+                        'price_at_sale' => $itemData['price'],
                         'returned_quantity' => $itemData['returned_quantity'] ?? 0,
                         'cost_price_at_sale' => $product->cost_price,
                     ]);

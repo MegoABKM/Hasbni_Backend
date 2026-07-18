@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
@@ -28,7 +29,7 @@ class SupplierController extends Controller
         $supplier = $user->suppliers()->create($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_created', [], $request->header('X-Device-ID'))); // 👈
+            event(new ShopDataUpdated($user->id, 'supplier_created', $supplier->toArray(), $request->header('X-Device-ID')));
         }
 
         return $supplier;
@@ -40,13 +41,13 @@ class SupplierController extends Controller
             'phone' => 'nullable|string|max:50',
             'balance' => 'sometimes|numeric',
         ]);
-        
+
         $user = $request->user();
         $supplier = $user->suppliers()->findOrFail($id);
         $supplier->update($validated);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_updated', [], $request->header('X-Device-ID'))); // 👈
+            event(new ShopDataUpdated($user->id, 'supplier_updated', $supplier->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json(['success' => true, 'supplier' => $supplier]);
@@ -57,7 +58,7 @@ class SupplierController extends Controller
         $user->suppliers()->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_deleted', [], $request->header('X-Device-ID'))); // 👈
+            event(new ShopDataUpdated($user->id, 'supplier_deleted', ['id' => $id], $request->header('X-Device-ID')));
         }
 
         return response()->json(['success' => true]);
@@ -90,7 +91,7 @@ class SupplierController extends Controller
         ]);
 
         if ($user->hasRealtimeSyncFeature()) {
-            event(new ShopDataUpdated($user->id, 'supplier_payment_synced', [], $request->header('X-Device-ID'))); // 👈
+            event(new ShopDataUpdated($user->id, 'supplier_payment_created', $payment->toArray(), $request->header('X-Device-ID')));
         }
 
         return response()->json(['id' => $payment->id]);

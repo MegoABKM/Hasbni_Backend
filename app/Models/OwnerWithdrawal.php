@@ -9,7 +9,7 @@ class OwnerWithdrawal extends Model {
     
     // ملاحظة: قاعدة البيانات مسماها withdrawals في بعض الأماكن، إذا كان الجدول الخاص بك هو withdrawals
     // يرجى إضافة: protected $table = 'withdrawals'; إذا لزم الأمر.
-    protected $table = 'withdrawals';
+  protected $table = 'owner_withdrawals';
     protected $guarded = [];
     protected $casts = ['withdrawal_date' => 'datetime'];
 }
