@@ -77,9 +77,16 @@ class PartnershipController extends Controller {
 
     public function syncGood(Request $request) {
         $user = $request->user();
-        $good = PartnerGood::firstOrCreate(
-            ['partner_id' => $request->partner_id, 'name' => $request->name],
-            ['cost_price' => $request->cost_price]
+        $data = $request->validate([
+            'partner_id' => 'required|integer',
+            'name' => 'required|string|max:255',
+            'cost_price' => 'required|numeric',
+        ]);
+
+        $partner = $user->partners()->findOrFail($data['partner_id']);
+        $good = $partner->goods()->firstOrCreate(
+            ['name' => $data['name']],
+            ['cost_price' => $data['cost_price']]
         );
 
         if ($user->hasRealtimeSyncFeature()) {
@@ -91,7 +98,14 @@ class PartnershipController extends Controller {
 
     public function updateGood(Request $request, $id) {
         $user = $request->user();
-        PartnerGood::findOrFail($id)->update($request->only(['name', 'cost_price']));
+        $good = PartnerGood::whereHas('partner', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->findOrFail($id);
+
+        $good->update($request->validate([
+            'name' => 'required|string|max:255',
+            'cost_price' => 'required|numeric',
+        ]));
         
         if ($user->hasRealtimeSyncFeature()) {
             event(new ShopDataUpdated($user->id, 'partnership_good_updated', [], $request->header('X-Device-ID'))); // 👈
@@ -102,7 +116,9 @@ class PartnershipController extends Controller {
 
     public function deleteGood(Request $request, $id) {
         $user = $request->user();
-        PartnerGood::findOrFail($id)->delete();
+        PartnerGood::whereHas('partner', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
             event(new ShopDataUpdated($user->id, 'partnership_good_updated', [], $request->header('X-Device-ID'))); // 👈
@@ -115,13 +131,16 @@ class PartnershipController extends Controller {
     {
         $request->validate([
             'record_date' => 'required|date',
-            'good_id' => 'required|exists:partner_goods,id',
+            'good_id' => 'required|integer',
             'quantity' => 'required|integer',
             'selling_price' => 'required|numeric',
             'cost_price_at_sale' => 'required|numeric',
         ]);
 
         $user = $request->user();
+        PartnerGood::whereHas('partner', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->findOrFail($request->good_id);
 
         $record = PartnershipRecord::firstOrCreate([
             'user_id' => $user->id,
@@ -148,7 +167,9 @@ class PartnershipController extends Controller {
 
     public function deleteRecordItem(Request $request, $id) {
         $user = $request->user();
-        \App\Models\PartnershipRecordItem::findOrFail($id)->delete();
+        \App\Models\PartnershipRecordItem::whereHas('record', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->findOrFail($id)->delete();
 
         if ($user->hasRealtimeSyncFeature()) {
             event(new ShopDataUpdated($user->id, 'partnership_record_updated', [], $request->header('X-Device-ID'))); // 👈

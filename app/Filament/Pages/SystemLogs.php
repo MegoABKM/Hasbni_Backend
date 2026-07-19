@@ -33,15 +33,39 @@ class SystemLogs extends Page
         }
 
         $file = fopen($logPath, 'r');
-        fseek($file, -50000, SEEK_END);
+        $size = File::size($logPath);
+        if ($size > 50000) {
+            fseek($file, -50000, SEEK_END);
+        }
         $content = fread($file, 50000);
         fclose($file);
 
         if (!$content) {
             $this->logContent = "Log file is empty. ✅";
         } else {
-            $this->logContent = $content;
+            $this->logContent = $this->redactSensitiveContent($content);
         }
+    }
+
+    private function redactSensitiveContent(string $content): string
+    {
+        $patterns = [
+            '/(APP_KEY=)([^\\s]+)/i',
+            '/(password|passwd|pwd)(["\\s:=]+)([^\\s",}]+)/i',
+            '/(token|secret|api[_-]?key)(["\\s:=]+)([^\\s",}]+)/i',
+            '/(Bearer\\s+)[A-Za-z0-9\\-._~+\\/]+=*/i',
+            '/\\b\\d{6}\\b/',
+        ];
+
+        $replacements = [
+            '$1[redacted]',
+            '$1$2[redacted]',
+            '$1$2[redacted]',
+            '$1[redacted]',
+            '[redacted-code]',
+        ];
+
+        return preg_replace($patterns, $replacements, $content) ?? '[Unable to display logs safely.]';
     }
 
     protected function getHeaderActions(): array

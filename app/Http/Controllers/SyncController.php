@@ -16,7 +16,14 @@ class SyncController extends Controller
         $sinceParam = $request->query('since', '1970-01-01T00:00:00Z');
         
         // 🚀 طرح 5 ثوانٍ كمعامل أمان لتفادي أي تأخير في معالجة العمليات المتزامنة في نفس اللحظة
-        $since = Carbon::parse($sinceParam)->setTimezone('UTC')->subSeconds(5)->format('Y-m-d H:i:s');
+        try {
+            $since = Carbon::parse($sinceParam)->setTimezone('UTC')->subSeconds(5)->format('Y-m-d H:i:s');
+        } catch (\Throwable) {
+            return response()->json([
+                'success' => false,
+                'message' => 'invalid_since_parameter',
+            ], 422);
+        }
 
         $data = [];
 

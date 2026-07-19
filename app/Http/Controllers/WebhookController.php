@@ -6,12 +6,19 @@ use App\Models\User;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Payment;
+use App\Models\PromoCode;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
 {
     public function handleStripe(Request $request)
     {
+        if (! $this->hasValidStripeSignature($request)) {
+            Log::warning('Stripe Webhook: invalid signature', ['ip' => $request->ip()]);
+
+            return response()->json(['error' => 'Invalid signature'], 400);
+        }
+
         $payload = $request->all();
 
         // التأكد من أن العملية هي عملية دفع ناجحة
@@ -81,5 +88,48 @@ if ($promoCodeStr) {
         }
 
         return response()->json(['status' => 'ignored']);
+    }
+
+    private function hasValidStripeSignature(Request $request): bool
+    {
+        $secret = env('STRIPE_WEBHOOK_SECRET');
+
+        if (! $secret) {
+            return ! app()->isProduction();
+        }
+
+        $signatureHeader = $request->header('Stripe-Signature');
+        if (! $signatureHeader) {
+            return false;
+        }
+
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $pair) {
+            [$key, $value] = array_pad(explode('=', $pair, 2), 2, null);
+            if ($key && $value) {
+                $parts[$key][] = $value;
+            }
+        }
+
+        $timestamp = $parts['t'][0] ?? null;
+        $signatures = $parts['v1'] ?? [];
+
+        if (! $timestamp || empty($signatures)) {
+            return false;
+        }
+
+        if (abs(time() - (int) $timestamp) > 300) {
+            return false;
+        }
+
+        $expected = hash_hmac('sha256', $timestamp . '.' . $request->getContent(), $secret);
+
+        foreach ($signatures as $signature) {
+            if (hash_equals($expected, $signature)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

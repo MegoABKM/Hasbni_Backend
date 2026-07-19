@@ -15,6 +15,18 @@ class InventoryController extends Controller
 
     public function syncMovements(Request $request)
     {
+        $request->validate([
+            'movements' => 'nullable|array',
+            'movements.*.local_id' => 'required_with:movements',
+            'movements.*.product_id' => 'required_with:movements|integer',
+            'movements.*.created_at' => 'required_with:movements|date',
+            'movements.*.movement_type' => 'required_with:movements|string|max:50',
+            'movements.*.quantity_change' => 'required_with:movements|integer',
+            'movements.*.current_balance' => 'required_with:movements|integer',
+            'movements.*.cost_price_at_time' => 'nullable|numeric',
+            'movements.*.reference_id' => 'nullable|integer',
+        ]);
+
         $user = $request->user();
         $responses = [];
         $syncedMovements = [];

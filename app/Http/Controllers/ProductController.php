@@ -18,7 +18,8 @@ class ProductController extends Controller
             });
         }
 
-        $sort = $request->sortBy ?? 'name';
+        $allowedSorts = ['name', 'barcode', 'quantity', 'alert_threshold', 'cost_price', 'selling_price', 'created_at', 'updated_at'];
+        $sort = in_array($request->sortBy, $allowedSorts, true) ? $request->sortBy : 'name';
         $dir = $request->ascending == 'true' ? 'asc' : 'desc';
         
         return $query->orderBy($sort, $dir)->paginate($request->limit ?? 20);

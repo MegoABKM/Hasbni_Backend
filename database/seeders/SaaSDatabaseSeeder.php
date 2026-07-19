@@ -11,12 +11,21 @@ class SaaSDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminPassword = env('INITIAL_ADMIN_PASSWORD');
+
+        if (! $adminPassword && app()->isLocal()) {
+            $adminPassword = 'password';
+        }
+
+        if (! $adminPassword) {
+            throw new \RuntimeException('INITIAL_ADMIN_PASSWORD must be set before seeding the super admin account.');
+        }
         // 1. إنشاء حساب المدير العام
         User::updateOrCreate(
             ['email' => 'admin@bhasbni.com'],
             [
                 'name' => 'Super Admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($adminPassword),
                 'role' => 'super_admin',
             ]
         );

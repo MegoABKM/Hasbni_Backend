@@ -10,6 +10,19 @@ class CashController extends Controller
 {
     public function sync(Request $request)
     {
+        $request->validate([
+            'drawers' => 'nullable|array',
+            'drawers.*.currency_code' => 'required_with:drawers|string|max:3',
+            'drawers.*.balance' => 'required_with:drawers|numeric',
+            'transactions' => 'nullable|array',
+            'transactions.*.transaction_type' => 'required_with:transactions|string|max:50',
+            'transactions.*.amount' => 'required_with:transactions|numeric',
+            'transactions.*.currency_code' => 'required_with:transactions|string|max:3',
+            'transactions.*.reference_id' => 'nullable|integer',
+            'transactions.*.employee_id' => 'nullable|integer',
+            'transactions.*.transaction_date' => 'nullable|date',
+        ]);
+
         $user = $request->user();
         $syncedTransactions = [];
         

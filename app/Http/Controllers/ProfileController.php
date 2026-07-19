@@ -10,21 +10,33 @@ class ProfileController extends Controller
 {
     public function upsert(Request $request)
     {
+        $validated = $request->validate([
+            'shop_name' => 'nullable|string|max:150',
+            'address' => 'nullable|string|max:500',
+            'phone_number' => 'nullable|string|max:50',
+            'city' => 'nullable|string|max:100',
+            'taxes' => 'nullable|array',
+            'discounts' => 'nullable|array',
+            'exchange_rates' => 'nullable|array',
+            'exchange_rates.*.currency_code' => 'required_with:exchange_rates|string|size:3',
+            'exchange_rates.*.rate_to_usd' => 'required_with:exchange_rates|numeric|min:0.000001',
+        ]);
+
         $user = $request->user();
 
         // 1. تحديث أو إنشاء البروفايل الأساسي
         $profile = Profile::updateOrCreate(
             ['user_id' => $user->id],
-            $request->only(['shop_name', 'address', 'phone_number', 'city' , 'taxes','discounts'])
+            collect($validated)->only(['shop_name', 'address', 'phone_number', 'city', 'taxes', 'discounts'])->toArray()
         );
 
         // 2. تحديث أسعار الصرف المرتبطة بالمستخدم (وليس البروفايل)
-        if ($request->has('exchange_rates') && is_array($request->exchange_rates)) {
+        if (isset($validated['exchange_rates']) && is_array($validated['exchange_rates'])) {
             
             $user->exchangeRates()->delete();
 
             $ratesData = [];
-            foreach ($request->exchange_rates as $rate) {
+            foreach ($validated['exchange_rates'] as $rate) {
                 if (isset($rate['rate_to_usd']) && $rate['rate_to_usd'] > 0) {
                     $ratesData[] = new ExchangeRate([
                         'currency_code' => strtoupper($rate['currency_code']),
@@ -66,7 +78,7 @@ class ProfileController extends Controller
     }
 
     public function setManagerPassword(Request $request) {
-        $request->validate(['p_password' => 'required']);
+        $request->validate(['p_password' => 'required|string|min:4|max:50']);
         $user = $request->user();
         if (!$user->profile) $user->profile()->create(['shop_name' => 'My Shop']);
         
@@ -77,7 +89,7 @@ class ProfileController extends Controller
     }
 
     public function verifyManagerPassword(Request $request) {
-        $request->validate(['p_password' => 'required']);
+        $request->validate(['p_password' => 'required|string|max:50']);
         $profile = $request->user()->profile;
         if (!$profile || !$profile->manager_password) return response()->json(false);
         return response()->json(Hash::check($request->p_password, $profile->manager_password));
@@ -89,9 +101,6 @@ class ProfileController extends Controller
         return response()->json((bool)$user->profile->manager_password);
     }
 }
-
-
-
 
 
 

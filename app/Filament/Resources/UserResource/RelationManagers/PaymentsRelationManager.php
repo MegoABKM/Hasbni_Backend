@@ -104,8 +104,19 @@ class PaymentsRelationManager extends RelationManager
                                 }
                             } 
                             elseif ($record->payment_method === 'stripe') {
-                                \Stripe\Stripe::setApiKey(env('STRIPE_SECRET'));
-                                \Stripe\Refund::create(['payment_intent' => $record->transaction_id]);
+                                if (!env('STRIPE_SECRET')) {
+                                    throw new \Exception('Stripe is not configured.');
+                                }
+
+                                $response = Http::asForm()
+                                    ->withToken(env('STRIPE_SECRET'))
+                                    ->post('https://api.stripe.com/v1/refunds', [
+                                        'payment_intent' => $record->transaction_id,
+                                    ]);
+
+                                if (!$response->successful()) {
+                                    throw new \Exception($response->json('error.message') ?? 'Stripe refund failed.');
+                                }
                             }
 
                             $record->update(['status' => 'refunded']);

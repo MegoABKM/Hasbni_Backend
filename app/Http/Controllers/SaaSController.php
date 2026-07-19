@@ -1,9 +1,13 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\Announcement;
 use App\Models\Plan;
-use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class SaaSController extends Controller
 {
@@ -60,14 +64,34 @@ class SaaSController extends Controller
 // جلب الإعلان النشط
     public function getActiveAnnouncement()
     {
-        $announcement = \App\Models\Announcement::where('is_active', true)
-            ->where(function ($query) {
-                $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
-            ->latest()
-            ->first();
+        try {
+            if (! Schema::hasTable('announcements')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => null,
+                    'message' => 'announcements_not_configured',
+                ]);
+            }
 
-        return response()->json(['success' => true, 'data' => $announcement]);
+            $announcement = Announcement::where('is_active', true)
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->latest()
+                ->first();
+
+            return response()->json(['success' => true, 'data' => $announcement]);
+        } catch (Throwable $exception) {
+            Log::warning('Active announcement lookup failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => null,
+                'message' => 'announcements_unavailable',
+            ]);
+        }
     }
 
     // التحقق من الكوبون

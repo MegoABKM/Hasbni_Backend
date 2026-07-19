@@ -14,7 +14,7 @@ class EnsureManagerAccess
 
         // إذا لم يتم تعيين باسورد للمدير، نسمح بالمرور
         if (!$profile || !$profile->manager_password) {
-            return $next($request);
+            return response()->json(['message' => 'manager_password_required'], 403);
         }
 
         $headerPin = $request->header('X-Manager-Password');

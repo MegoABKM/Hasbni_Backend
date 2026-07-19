@@ -8,6 +8,7 @@ use App\Models\SaleItem;
 use App\Models\InventoryMovement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Events\ShopDataUpdated;
 
 class SaleController extends Controller
@@ -24,6 +25,15 @@ class SaleController extends Controller
 
     public function store(Request $request)
     {
+        $request->validate([
+            'p_sale_items_data' => 'required|array|min:1',
+            'p_sale_items_data.*.product_id' => 'required|integer',
+            'p_sale_items_data.*.quantity' => 'required|integer|min:1',
+            'p_sale_items_data.*.price' => 'required|numeric',
+            'p_total_price' => 'required|numeric',
+            'p_total_profit' => 'required|numeric',
+        ]);
+
         $user = $request->user();
         $senderDeviceId = $request->header('X-Device-ID');
 
@@ -52,7 +62,16 @@ class SaleController extends Controller
 
             foreach ($request->p_sale_items_data as $itemData) {
                 // 🚨 منع تضارب المخزون بـ LockForUpdate
-                $product = Product::where('id', $itemData['product_id'])->lockForUpdate()->first();
+                $product = $user->products()
+                    ->where('id', $itemData['product_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $product) {
+                    DB::rollBack();
+
+                    return response()->json(['message' => 'invalid_product'], 422);
+                }
                 
                 if ($product) {
                     $oldQty = $product->quantity;
@@ -104,7 +123,12 @@ class SaleController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => $e->getMessage()], 422);
+            Log::warning('Sale creation failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'sale_creation_failed'], 422);
         }
     }
 
@@ -126,7 +150,7 @@ class SaleController extends Controller
         
         if ($saleId) {
             if ($user->hasRealtimeSyncFeature()) {
-                $updatedSale = \App\Models\Sale::with('items')->find($saleId);
+                $updatedSale = $user->sales()->with('items')->find($saleId);
                 event(new ShopDataUpdated($user->id, 'sale_updated', $updatedSale->toArray(), $request->header('X-Device-ID'))); 
             }
             return response()->json(true);
@@ -141,7 +165,9 @@ class SaleController extends Controller
             
             $oldSaleId = $this->executeReturn($user, $request->p_sale_item_id_to_return, $request->p_return_quantity, false, null);
             
-            $returnedItem = \App\Models\SaleItem::find($request->p_sale_item_id_to_return);
+            $returnedItem = \App\Models\SaleItem::whereHas('sale', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->find($request->p_sale_item_id_to_return);
             $returnedValueLocal = $returnedItem ? ($returnedItem->price_at_sale * $request->p_return_quantity) : 0;
 
             $newSaleId = $this->executeStore($user, [
@@ -163,15 +189,15 @@ class SaleController extends Controller
                 'p_created_at' => clone now(),
             ]);
 
-            $newSale = Sale::find($newSaleId);
+            $newSale = $user->sales()->findOrFail($newSaleId);
             $priceDiff = $newSale->total_price - $returnedValueLocal; 
 
             if ($user->hasRealtimeSyncFeature()) {
                 if ($oldSaleId) {
-                    $oldSale = \App\Models\Sale::with('items')->find($oldSaleId);
+                    $oldSale = $user->sales()->with('items')->find($oldSaleId);
                     event(new ShopDataUpdated($user->id, 'sale_updated', $oldSale->toArray(), $request->header('X-Device-ID')));
                 }
-                $newSaleObj = \App\Models\Sale::with('items')->find($newSaleId);
+                $newSaleObj = $user->sales()->with('items')->find($newSaleId);
                 event(new ShopDataUpdated($user->id, 'sale_created', $newSaleObj->toArray(), $request->header('X-Device-ID')));
             }
 
@@ -285,7 +311,9 @@ class SaleController extends Controller
         $saleItem->increment('returned_quantity', $returnQty);
         
         if ($saleItem->product_id) {
-            Product::where('id', $saleItem->product_id)->increment('quantity', $returnQty);
+            Product::where('id', $saleItem->product_id)
+                ->where('user_id', $saleItem->sale->user_id)
+                ->increment('quantity', $returnQty);
         }
         
         $sale = $saleItem->sale;

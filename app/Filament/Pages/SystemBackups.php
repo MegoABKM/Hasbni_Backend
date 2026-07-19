@@ -114,10 +114,16 @@ public static function getNavigationIcon(): string { return 'heroicon-o-circle-s
     // 🚀 تحميل ملف النسخة الاحتياطية لجهازك
     public function downloadBackup($name)
     {
-        $filePath = storage_path('app/private/backups/' . $name);
+        $safeName = basename((string) $name);
+        if ($safeName !== $name || !str_ends_with($safeName, '.sql')) {
+            Notification::make()->title('Invalid backup file.')->danger()->send();
+            return null;
+        }
+
+        $filePath = storage_path('app/private/backups/' . $safeName);
 
         if (File::exists($filePath)) {
-            return response()->download($filePath);
+            return response()->download($filePath, $safeName);
         }
 
         Notification::make()->title('File not found!')->danger()->send();
@@ -126,7 +132,13 @@ public static function getNavigationIcon(): string { return 'heroicon-o-circle-s
     // 🚀 حذف ملف النسخة الاحتياطية لتوفير المساحة
     public function deleteBackup($name)
     {
-        $filePath = storage_path('app/private/backups/' . $name);
+        $safeName = basename((string) $name);
+        if ($safeName !== $name || !str_ends_with($safeName, '.sql')) {
+            Notification::make()->title('Invalid backup file.')->danger()->send();
+            return;
+        }
+
+        $filePath = storage_path('app/private/backups/' . $safeName);
 
         if (File::exists($filePath)) {
             File::delete($filePath);

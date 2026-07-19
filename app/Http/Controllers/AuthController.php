@@ -83,7 +83,6 @@ class AuthController extends Controller
             \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\ResetPasswordOtpMail($otp));
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Registration Mail failed: " . $e->getMessage());
-            \Illuminate\Support\Facades\Log::info("OTP for registration {$user->email} is: {$otp}");
         }
 
         // 🚨 نرجع رد يفيد بأن الحساب مسجل ولكنه يتطلب التحقق (بدون توكن)
@@ -108,6 +107,10 @@ class AuthController extends Controller
             return response()->json(['success' => false, 'message' => 'error_messages.invalid_otp'], 400);
         }
 
+        if (\Carbon\Carbon::parse($record->created_at)->isPast()) {
+            return response()->json(['success' => false, 'message' => 'error_messages.expired_otp'], 400);
+        }
+
         // تفعيل الحساب في قاعدة البيانات
         $user = User::where('email', $request->email)->first();
         $user->email_verified_at = now();
@@ -127,10 +130,21 @@ class AuthController extends Controller
         ], 200);
     }
     public function login(Request $request) {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json(['message' => 'invalid_credentials'], 401);
+        }
+
+        if ($user->is_banned) {
+            $user->tokens()->delete();
+
+            return response()->json(['message' => 'account_disabled'], 403);
         }
         
         $this->logAuthEvent($user, 'login');
@@ -205,6 +219,10 @@ class AuthController extends Controller
 
         if (!$record || !Hash::check($request->otp, $record->token)) {
             return response()->json(['success' => false, 'message' => 'error_messages.invalid_otp'], 400);
+        }
+
+        if (\Carbon\Carbon::parse($record->created_at)->isPast()) {
+            return response()->json(['success' => false, 'message' => 'error_messages.expired_otp'], 400);
         }
 
         // تحديث كلمة المرور
