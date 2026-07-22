@@ -17,6 +17,10 @@ return [
         'max_custom_range_days' => env('SAAS_KPI_MAX_CUSTOM_RANGE_DAYS', 366),
     ],
 
+    'stripe' => [
+        'suspend_on_payment_failure' => env('SAAS_STRIPE_SUSPEND_ON_PAYMENT_FAILURE', false),
+    ],
+
     'statuses' => [
         'subscriptions_active' => 'active',
         'subscriptions_churned' => ['expired', 'canceled'],

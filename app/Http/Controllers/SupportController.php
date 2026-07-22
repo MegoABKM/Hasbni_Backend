@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Faq;
 use App\Models\Instruction;
+use App\Models\User;
+use Filament\Notifications\Notification;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SupportController extends Controller
@@ -31,7 +36,7 @@ class SupportController extends Controller
         return response()->json(['success' => true, 'data' => $tickets]);
     }
 
-    public function createTicket(Request $request)
+    public function createTicket(Request $request): JsonResponse
     {
         $request->validate([
             'subject' => 'required|string|max:255',
@@ -43,6 +48,21 @@ class SupportController extends Controller
             'message' => $request->message,
             'status' => 'open',
         ]);
+
+        $recipients = User::query()
+            ->whereIn('role', ['super_admin', 'support_admin'])
+            ->select('id')
+            ->get();
+
+        if ($recipients->isNotEmpty()) {
+            Notification::make()
+                ->title(__('New support ticket'))
+                ->body(__('A tenant submitted a new support ticket: :subject', [
+                    'subject' => $ticket->subject,
+                ]))
+                ->warning()
+                ->sendToDatabase($recipients, isEventDispatched: true);
+        }
 
         return response()->json([
             'success' => true,

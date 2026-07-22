@@ -1,12 +1,17 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources;
 
+use App\Models\User;
+use App\Saas\Filament\Exports\PaymentExporter;
 use App\Saas\Filament\Resources\PaymentResource\Pages;
 use App\Saas\Models\Payment;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ExportBulkAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -24,6 +29,13 @@ use Illuminate\Database\Eloquent\Builder;
 class PaymentResource extends Resource
 {
     protected static ?string $model = Payment::class;
+
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof User && $user->hasAnyRole(['super_admin', 'finance_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {
@@ -169,6 +181,13 @@ class PaymentResource extends Resource
                         now()->startOfMonth(),
                         now()->endOfMonth(),
                     ])),
+            ])
+            ->toolbarActions([
+                ExportBulkAction::make()
+                    ->label(__('Export Payments'))
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->exporter(PaymentExporter::class)
+                    ->columnMappingColumns(2),
             ])
             ->recordActions([
                 Action::make('print_receipt')

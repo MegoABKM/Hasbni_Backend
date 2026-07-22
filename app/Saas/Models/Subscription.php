@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Models;
 
 use App\Models\User;
@@ -13,6 +15,8 @@ class Subscription extends Model
     protected $fillable = [
         'user_id',
         'plan_id',
+        'stripe_subscription_id',
+        'stripe_customer_id',
         'status',
         'billing_cycle',
         'starts_at',

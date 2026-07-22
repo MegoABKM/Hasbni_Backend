@@ -30,7 +30,9 @@ class ExecutiveDecisionSupportWidget extends Widget
      */
     protected function getViewData(): array
     {
-        return Cache::remember('saas:decision-support:v2', 300, function (): array {
+        $locale = app()->getLocale();
+
+        return Cache::remember("saas:decision-support:v2:{$locale}", 300, function (): array {
             $failedPayments = Payment::query()
                 ->failed()
                 ->where('created_at', '>=', now()->subDays(7))

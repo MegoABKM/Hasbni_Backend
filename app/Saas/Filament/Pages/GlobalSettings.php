@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Pages;
 
+use App\Providers\PaymentConfigServiceProvider;
 use App\Saas\Models\AppConfig;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -10,6 +13,7 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class GlobalSettings extends Page implements HasForms
@@ -50,6 +54,9 @@ class GlobalSettings extends Page implements HasForms
             'whatsapp_number' => $configs['whatsapp_number'] ?? '',
             'is_disabled' => isset($configs['is_disabled']) ? ($configs['is_disabled'] === 'true' || $configs['is_disabled'] == 1) : false,
             'firebase_json' => $configs['firebase_json'] ?? null,
+            'stripe_secret_key' => $configs['stripe_secret_key'] ?? null,
+            'stripe_webhook_secret' => $configs['stripe_webhook_secret'] ?? null,
+            'myfatoorah_token' => $configs['myfatoorah_token'] ?? null,
         ]);
     }
 
@@ -80,11 +87,41 @@ class GlobalSettings extends Page implements HasForms
                 Toggle::make('is_disabled')
                     ->label(__('Maintenance Mode'))
                     ->onColor('danger')->offColor('success'),
+
+                Section::make(__('Payment Gateways'))
+                    ->description(__('Configure payment credentials used by Stripe and MyFatoorah.'))
+                    ->icon('heroicon-o-credit-card')
+                    ->schema([
+                        TextInput::make('stripe_secret_key')
+                            ->label(__('Stripe Secret Key'))
+                            ->password()
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->helperText(__('Leave blank to keep the currently configured key.')),
+
+                        TextInput::make('stripe_webhook_secret')
+                            ->label(__('Stripe Webhook Secret'))
+                            ->password()
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->helperText(__('Leave blank to keep the currently configured secret.')),
+
+                        TextInput::make('myfatoorah_token')
+                            ->label(__('MyFatoorah API Token'))
+                            ->password()
+                            ->revealable()
+                            ->autocomplete('new-password')
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->helperText(__('Leave blank to keep the currently configured token.')),
+                    ])
+                    ->columns(1),
             ])
             ->statePath('data');
     }
 
-    public function saveSettings()
+    public function saveSettings(): void
     {
         $state = $this->form->getState();
 
@@ -115,6 +152,8 @@ class GlobalSettings extends Page implements HasForms
                 ['value' => $value]
             );
         }
+
+        PaymentConfigServiceProvider::forgetCache();
 
         Notification::make()
             ->title(__('Settings Saved Successfully!'))

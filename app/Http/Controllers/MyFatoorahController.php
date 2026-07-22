@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Saas\Models\Payment;
@@ -11,15 +13,15 @@ use Illuminate\Support\Facades\Log;
 
 class MyFatoorahController extends Controller
 {
-    private $baseUrl;
+    private string $baseUrl;
 
-    private $apiKey;
+    private string $apiKey;
 
     public function __construct()
     {
         // تغيير الرابط من apitest إلى api عند الإطلاق الفعلي
-        $this->baseUrl = env('MYFATOORAH_URL', 'https://apitest.myfatoorah.com');
-        $this->apiKey = env('MYFATOORAH_TOKEN', '');
+        $this->baseUrl = (string) config('services.myfatoorah.url', 'https://apitest.myfatoorah.com');
+        $this->apiKey = (string) config('services.myfatoorah.token', '');
     }
 
     // 1. إنشاء رابط الدفع وارساله لتطبيق فلاتر

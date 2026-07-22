@@ -46,9 +46,7 @@ abstract class BaseKpiPage extends Page implements HasForms
                 Grid::make([
                     'default' => 1,
                     'md' => 2,
-                    'xl' => 3,
                 ])
-                    ->extraAttributes(['class' => 'w-full gap-6'])
                     ->schema([
                         Select::make('period')
                             ->label(__('Date Range'))
@@ -67,21 +65,7 @@ abstract class BaseKpiPage extends Page implements HasForms
                             ->default('last_30_days')
                             ->native(false)
                             ->live(debounce: 500)
-                            ->columnSpan(1)
-                            ->extraAttributes(['class' => 'min-w-[200px] w-full'])
-                            ->extraFieldWrapperAttributes(['class' => 'min-w-[200px] w-full']),
-                        Select::make('comparison')
-                            ->label(__('Comparison'))
-                            ->options([
-                                'previous_period' => __('Previous Period'),
-                                'previous_year' => __('Previous Year'),
-                            ])
-                            ->default('previous_period')
-                            ->native(false)
-                            ->live(debounce: 500)
-                            ->columnSpan(1)
-                            ->extraAttributes(['class' => 'min-w-[200px] w-full'])
-                            ->extraFieldWrapperAttributes(['class' => 'min-w-[200px] w-full']),
+                            ->columnSpan(1),
                         Select::make('country')
                             ->label(__('Country'))
                             ->placeholder(__('All Countries'))
@@ -91,19 +75,12 @@ abstract class BaseKpiPage extends Page implements HasForms
                             ->preload()
                             ->native(false)
                             ->live(debounce: 500)
-                            ->columnSpan([
-                                'default' => 1,
-                                'md' => 2,
-                                'xl' => 1,
-                            ])
-                            ->extraAttributes(['class' => 'min-w-[200px] w-full'])
-                            ->extraFieldWrapperAttributes(['class' => 'min-w-[200px] w-full']),
+                            ->columnSpan(1),
                     ]),
                 Grid::make([
                     'default' => 1,
                     'md' => 2,
                 ])
-                    ->extraAttributes(['class' => 'w-full gap-6'])
                     ->schema([
                         DatePicker::make('start_date')
                             ->label(__('Start Date'))
@@ -114,9 +91,7 @@ abstract class BaseKpiPage extends Page implements HasForms
                             ->closeOnDateSelection()
                             ->visible(fn (Get $get): bool => $get('period') === 'custom')
                             ->live(debounce: 500)
-                            ->columnSpan(1)
-                            ->extraAttributes(['class' => 'min-w-[200px] w-full'])
-                            ->extraFieldWrapperAttributes(['class' => 'min-w-[200px] w-full']),
+                            ->columnSpan(1),
                         DatePicker::make('end_date')
                             ->label(__('End Date'))
                             ->default(now()->toDateString())
@@ -126,13 +101,10 @@ abstract class BaseKpiPage extends Page implements HasForms
                             ->closeOnDateSelection()
                             ->visible(fn (Get $get): bool => $get('period') === 'custom')
                             ->live(debounce: 500)
-                            ->columnSpan(1)
-                            ->extraAttributes(['class' => 'min-w-[200px] w-full'])
-                            ->extraFieldWrapperAttributes(['class' => 'min-w-[200px] w-full']),
+                            ->columnSpan(1),
                     ]),
             ])
-                ->livewireSubmitHandler('updateFilters')
-                ->extraAttributes(['class' => 'w-full min-w-0 overflow-visible']),
+                ->livewireSubmitHandler('updateFilters'),
         ]);
     }
 
@@ -184,6 +156,7 @@ abstract class BaseKpiPage extends Page implements HasForms
         return [
             ...self::DEFAULT_FILTERS,
             ...($this->filters ?? []),
+            'comparison' => 'previous_period',
         ];
     }
 

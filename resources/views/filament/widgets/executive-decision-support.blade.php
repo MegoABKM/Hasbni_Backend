@@ -19,7 +19,7 @@
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $alert['label'] }}</p>
-                            <p class="mt-2 text-2xl font-semibold text-gray-950 dark:text-white" dir="ltr">{{ $alert['value'] }}</p>
+                            <p class="mt-2 text-2xl font-semibold text-gray-950 dark:text-white" dir="ltr"><bdi>{{ $alert['value'] }}</bdi></p>
                         </div>
                         <x-filament::badge :color="$alert['severity'] === 'gray' ? 'gray' : $alert['severity']">
                             {{ __($alert['severity'] === 'gray' ? 'Information' : ucfirst($alert['severity'])) }}
@@ -43,11 +43,11 @@
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ $plan['name'] }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ number_format($plan['active_subscriptions']) }} {{ __('Active Subscriptions') }}
+                                    <bdi>{{ number_format($plan['active_subscriptions']) }} {{ __('Active Subscriptions') }}</bdi>
                                 </p>
                             </div>
                             <p class="shrink-0 text-sm font-semibold text-gray-950 dark:text-white" dir="ltr">
-                                ${{ number_format($plan['mrr'], 2) }}
+                                <bdi>${{ number_format($plan['mrr'], 2) }}</bdi>
                             </p>
                         </div>
                     @empty
@@ -68,7 +68,7 @@
                                 <p class="truncate text-sm font-medium">{{ $tenant['name'] }}</p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $tenant['country'] }}</p>
                             </div>
-                            <p class="shrink-0 text-xs text-gray-500 dark:text-gray-400">{{ $tenant['registered_at'] }}</p>
+                            <p class="shrink-0 text-xs text-gray-500 dark:text-gray-400"><bdi>{{ $tenant['registered_at'] }}</bdi></p>
                         </a>
                     @empty
                         <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">{{ __('No tenants have registered yet.') }}</p>

@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources;
 
 use App\Mail\SupportTicketRepliedMail;
+use App\Models\User;
 use App\Saas\Filament\Resources\SupportTicketResource\Pages\ManageSupportTickets;
 use App\Saas\Models\SupportTicket;
 use Filament\Actions\EditAction;
@@ -19,6 +22,13 @@ use Illuminate\Support\Facades\Mail;
 class SupportTicketResource extends Resource
 {
     protected static ?string $model = SupportTicket::class;
+
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof User && $user->hasAnyRole(['super_admin', 'support_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

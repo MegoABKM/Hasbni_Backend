@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Saas\Models\Payment;
@@ -16,6 +18,18 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /**
+     * Roles allowed to authenticate into the Filament administration panel.
+     * Resource-level authorization remains more restrictive where required.
+     *
+     * @var array<int, string>
+     */
+    public const FILAMENT_ADMIN_ROLES = [
+        'super_admin',
+        'support_admin',
+        'finance_admin',
+    ];
+
     protected $fillable = [
         'name', 'email', 'password', 'role', 'is_banned',
         'phone', 'country', 'business_type', 'fcm_token',
@@ -30,7 +44,15 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->role === 'super_admin';
+        return in_array((string) $this->role, self::FILAMENT_ADMIN_ROLES, true);
+    }
+
+    /**
+     * @param  array<int, string>  $roles
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array((string) $this->role, $roles, true);
     }
 
     public function scopeTenants(Builder $query): Builder

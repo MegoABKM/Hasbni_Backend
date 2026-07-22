@@ -39,6 +39,53 @@ final class KpiService
             function () use ($range, $country): array {
                 $current = $this->summaryForRange($range['start'], $range['end'], $country);
                 $previous = $this->summaryForRange($range['previous_start'], $range['previous_end'], $country);
+                $planDistribution = $this->planDistribution($range['end'], $country);
+                $breakdownSections = [
+                    [
+                        'heading_key' => 'kpi.section.subscription_health.heading',
+                        'description_key' => 'kpi.section.subscription_health.description',
+                        'items' => [
+                            [
+                                'label_key' => 'kpi.metric.average_revenue_per_account',
+                                'value' => $this->formatValue($current['arpu'], 'currency'),
+                            ],
+                            [
+                                'label_key' => 'kpi.metric.new_signups',
+                                'value' => $this->formatValue($current['new_signups'], 'number'),
+                            ],
+                            [
+                                'label_key' => 'kpi.metric.churned_subscriptions',
+                                'value' => $this->formatValue($current['churned_subscriptions'], 'number'),
+                            ],
+                            [
+                                'label_key' => 'kpi.metric.net_revenue_retention',
+                                'value' => $this->formatValue($current['nrr'], 'percentage'),
+                            ],
+                            [
+                                'label_key' => 'kpi.metric.expansion_revenue',
+                                'value' => $this->formatValue($current['expansion_revenue'], 'currency'),
+                            ],
+                            [
+                                'label_key' => 'kpi.metric.contraction_revenue',
+                                'value' => $this->formatValue($current['contraction_revenue'], 'currency'),
+                            ],
+                        ],
+                    ],
+                ];
+
+                if ($planDistribution !== []) {
+                    $breakdownSections[] = [
+                        'heading_key' => 'kpi.section.plan_distribution.heading',
+                        'description_key' => 'kpi.section.plan_distribution.description',
+                        'items' => array_map(
+                            fn (array $plan): array => [
+                                'label_key' => $plan['name'],
+                                'value' => $this->formatValue($plan['active_subscriptions'], 'number'),
+                            ],
+                            $planDistribution,
+                        ),
+                    ];
+                }
 
                 return [
                     'key' => 'saas',
@@ -69,26 +116,7 @@ final class KpiService
                         ],
                     ],
                     'breakdowns' => [
-                        'sections' => [
-                            [
-                                'heading_key' => 'kpi.section.subscription_health.heading',
-                                'description_key' => 'kpi.section.subscription_health.description',
-                                'items' => [
-                                    [
-                                        'label_key' => 'kpi.metric.average_revenue_per_account',
-                                        'value' => $this->formatValue($current['arpu'], 'currency'),
-                                    ],
-                                    [
-                                        'label_key' => 'kpi.metric.new_signups',
-                                        'value' => $this->formatValue($current['new_signups'], 'number'),
-                                    ],
-                                    [
-                                        'label_key' => 'kpi.metric.churned_subscriptions',
-                                        'value' => $this->formatValue($current['churned_subscriptions'], 'number'),
-                                    ],
-                                ],
-                            ],
-                        ],
+                        'sections' => $breakdownSections,
                     ],
                 ];
             },
@@ -432,6 +460,10 @@ final class KpiService
         $activeSubscriptions = (int) $endingSnapshot['active_subscriptions'];
         $arpu = $activeSubscriptions > 0 ? $mrr / $activeSubscriptions : 0.0;
         $ltv = $churnRate > 0 ? $arpu / ($churnRate / 100) : 0.0;
+        $mrrMovements = $this->mrrMovementSummary($start, $end, $country);
+        $nrr = (float) $openingSnapshot['mrr'] > 0
+            ? (($openingSnapshot['mrr'] + $mrrMovements['expansion_mrr'] - $mrrMovements['contraction_mrr'] - $mrrMovements['churned_mrr']) / $openingSnapshot['mrr']) * 100
+            : 0.0;
 
         return [
             'mrr' => round($mrr, 2),
@@ -443,6 +475,9 @@ final class KpiService
             'platform_revenue' => round($this->platformRevenue($start, $end, $country), 2),
             'new_signups' => $newSignups,
             'churned_subscriptions' => $churnedSubscriptions,
+            'nrr' => round($nrr, 2),
+            'expansion_revenue' => $mrrMovements['expansion_mrr'],
+            'contraction_revenue' => $mrrMovements['contraction_mrr'],
         ];
     }
 
@@ -610,6 +645,30 @@ final class KpiService
             ->sum($column);
     }
 
+    private function sumDailyMetricValue(string $column, Carbon $start, Carbon $end, ?string $country = null): float
+    {
+        if (! $this->hasDailyMetricsTable()) {
+            return 0.0;
+        }
+
+        return round((float) $this->dailyMetricQuery($country)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->sum($column), 2);
+    }
+
+    /**
+     * @return array{new_mrr: float, expansion_mrr: float, contraction_mrr: float, churned_mrr: float}
+     */
+    private function mrrMovementSummary(Carbon $start, Carbon $end, ?string $country = null): array
+    {
+        return [
+            'new_mrr' => $this->sumDailyMetricValue('new_mrr', $start, $end, $country),
+            'expansion_mrr' => $this->sumDailyMetricValue('expansion_mrr', $start, $end, $country),
+            'contraction_mrr' => $this->sumDailyMetricValue('contraction_mrr', $start, $end, $country),
+            'churned_mrr' => $this->sumDailyMetricValue('churned_mrr', $start, $end, $country),
+        ];
+    }
+
     private function platformRevenue(Carbon $start, Carbon $end, ?string $country = null): float
     {
         $query = DB::table('payments')
@@ -664,6 +723,47 @@ final class KpiService
         }
 
         return $aggregates;
+    }
+
+    /**
+     * Return active subscription counts grouped by plan at a point in time.
+     *
+     * @return array<int, array{name: string, active_subscriptions: int}>
+     */
+    private function planDistribution(Carbon $asOf, ?string $country = null): array
+    {
+        $query = DB::table('subscriptions')
+            ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
+            ->join('users', 'users.id', '=', 'subscriptions.user_id')
+            ->where('users.role', $this->tenantRole())
+            ->where('subscriptions.status', 'active')
+            ->where(function (Builder $query) use ($asOf): void {
+                $query->whereNull('subscriptions.starts_at')
+                    ->orWhere('subscriptions.starts_at', '<=', $asOf);
+            })
+            ->where(function (Builder $query) use ($asOf): void {
+                $query->whereNull('subscriptions.ends_at')
+                    ->orWhere('subscriptions.ends_at', '>=', $asOf);
+            })
+            ->select([
+                'plans.name',
+            ])
+            ->selectRaw('COUNT(subscriptions.id) as active_subscriptions')
+            ->groupBy('plans.id', 'plans.name')
+            ->orderByDesc('active_subscriptions')
+            ->orderBy('plans.name');
+
+        if ($country !== null) {
+            $this->whereCountry($query, $country, 'users');
+        }
+
+        return $query
+            ->get()
+            ->map(fn (object $row): array => [
+                'name' => (string) $row->name,
+                'active_subscriptions' => (int) $row->active_subscriptions,
+            ])
+            ->all();
     }
 
     /**

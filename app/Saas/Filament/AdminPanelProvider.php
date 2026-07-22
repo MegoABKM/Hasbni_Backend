@@ -38,6 +38,8 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->font('Cairo')
             ->maxContentWidth('full')
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->colors([
                 'primary' => Color::Teal,
             ])
