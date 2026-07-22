@@ -334,5 +334,11 @@
     "Amount Paid": "المبلغ المدفوع",
     "Thank you for your business.": "شكرًا لتعاملكم معنا.",
     "Your support request has received a new reply.": "تلقى طلب الدعم الخاص بك ردًا جديدًا.",
-    "Ticket": "التذكرة"
+    "Ticket": "التذكرة",
+    "kpi.metric.new_mrr": "الإيراد الشهري المتكرر الجديد",
+    "kpi.metric.expansion_mrr": "توسع الإيراد الشهري المتكرر",
+    "kpi.metric.contraction_mrr": "انكماش الإيراد الشهري المتكرر",
+    "kpi.metric.churned_mrr": "الإيراد الشهري المتكرر المفقود",
+    "kpi.chart.mrr_movements": "حركات الإيراد الشهري المتكرر",
+    "kpi.chart.mrr_movements.description": "التغيرات اليومية في الإيراد المتكرر حسب نوع الحركة."
 }

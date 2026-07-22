@@ -1,30 +1,35 @@
 <?php
+
 namespace App\Http\Middleware;
 
+use App\Saas\Models\Plan;
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\Plan;
-use Carbon\Carbon;
 
 class EnforcePlanLimits
 {
     public function handle(Request $request, Closure $next, $feature = null): Response
     {
         $user = $request->user();
-        if (!$user) return $next($request);
+        if (! $user) {
+            return $next($request);
+        }
 
         // الافتراضي هو الباقة المجانية
         $plan = Plan::where('name', 'Free')->first();
-        
+
         // 🚨 التحقق الصارم: إذا كان الاشتراك موجوداً ولم يتجاوز تاريخ اليوم
-        if ($user->subscription && $user->subscription->ends_at && !Carbon::parse($user->subscription->ends_at)->isPast()) {
+        if ($user->subscription && $user->subscription->ends_at && ! Carbon::parse($user->subscription->ends_at)->isPast()) {
             if ($user->subscription->status !== 'expired') {
                 $plan = $user->subscription->plan ?? $plan;
             }
         }
 
-        if (!$plan) return $next($request);
+        if (! $plan) {
+            return $next($request);
+        }
 
         $features = is_string($plan->features) ? json_decode($plan->features, true) : $plan->features;
 

@@ -18,7 +18,7 @@
                     @forelse ($countries as $country)
                         <tr class="transition-colors hover:bg-gray-50/80 dark:hover:bg-white/5">
                             <td class="px-4 py-3 font-medium text-gray-950 dark:text-white">
-                                {{ $country['country'] === \App\Services\KpiService::UNKNOWN_COUNTRY ? __('Unspecified') : $country['country'] }}
+                                {{ $country['country'] === \App\Saas\Services\KpiService::UNKNOWN_COUNTRY ? __('Unspecified') : $country['country'] }}
                             </td>
                             <td class="px-4 py-3 text-end text-gray-700 dark:text-gray-200">
                                 <bdi>{{ number_format($country['registered_users']) }}</bdi>

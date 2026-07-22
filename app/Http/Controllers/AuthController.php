@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ResetPasswordOtpMail;
-use App\Models\AuditLog;
-use App\Models\Plan;
 use App\Models\User;
+use App\Saas\Models\AuditLog;
+use App\Saas\Models\Plan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

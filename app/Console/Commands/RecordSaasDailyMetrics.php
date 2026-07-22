@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\KpiService;
+use App\Saas\Services\KpiService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Throwable;

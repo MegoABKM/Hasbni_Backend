@@ -53,7 +53,7 @@ class FilamentTranslationTest extends TestCase
     {
         $keys = ['Success', 'Information'];
         $directories = [
-            app_path('Filament'),
+            app_path('Saas/Filament'),
             app_path('Providers/Filament'),
             app_path('Services'),
             app_path('Support'),

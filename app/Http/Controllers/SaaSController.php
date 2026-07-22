@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
-use App\Models\Plan;
+use App\Saas\Models\Plan;
+use App\Saas\Models\PromoCode;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,53 +17,54 @@ class SaaSController extends Controller
     {
         $plans = Plan::where('is_active', true)->get();
         // Decode features so Flutter reads it as a proper JSON map
-        foreach($plans as $plan) {
-            if(is_string($plan->features)) {
+        foreach ($plans as $plan) {
+            if (is_string($plan->features)) {
                 $plan->features = json_decode($plan->features, true);
             }
         }
+
         return response()->json(['success' => true, 'data' => $plans]);
     }
 
-  public function mySubscription(Request $request)
-{
-    $user = $request->user()->load('subscription.plan');
-    $freePlan = Plan::where('name', 'Free')->first();
-    
-    // تأكد من فك تشفير الميزات للخطة المجانية
-    if ($freePlan && is_string($freePlan->features)) {
-        $freePlan->features = json_decode($freePlan->features, true);
-    }
+    public function mySubscription(Request $request)
+    {
+        $user = $request->user()->load('subscription.plan');
+        $freePlan = Plan::where('name', 'Free')->first();
 
-    if ($user->subscription && $user->subscription->ends_at && Carbon::parse($user->subscription->ends_at)->isPast()) {
-        if ($user->subscription->status !== 'expired') {
-            $user->subscription->update(['status' => 'expired']);
+        // تأكد من فك تشفير الميزات للخطة المجانية
+        if ($freePlan && is_string($freePlan->features)) {
+            $freePlan->features = json_decode($freePlan->features, true);
         }
-    }
 
-    if (!$user->subscription || $user->subscription->status === 'expired') {
+        if ($user->subscription && $user->subscription->ends_at && Carbon::parse($user->subscription->ends_at)->isPast()) {
+            if ($user->subscription->status !== 'expired') {
+                $user->subscription->update(['status' => 'expired']);
+            }
+        }
+
+        if (! $user->subscription || $user->subscription->status === 'expired') {
+            return response()->json([
+                'success' => true,
+                'is_expired' => true,
+                'plan' => $freePlan,
+            ]);
+        }
+
+        $plan = $user->subscription->plan;
+        // 🚨 الحل هنا: تأكد من فك التشفير قبل الإرسال 🚨
+        if ($plan && is_string($plan->features)) {
+            $plan->features = json_decode($plan->features, true);
+        }
+
         return response()->json([
             'success' => true,
-            'is_expired' => true,
-            'plan' => $freePlan
+            'is_expired' => false,
+            'subscription' => $user->subscription,
+            'plan' => $plan,
         ]);
     }
 
-    $plan = $user->subscription->plan;
-    // 🚨 الحل هنا: تأكد من فك التشفير قبل الإرسال 🚨
-    if ($plan && is_string($plan->features)) {
-        $plan->features = json_decode($plan->features, true);
-    }
-
-    return response()->json([
-        'success' => true,
-        'is_expired' => false,
-        'subscription' => $user->subscription,
-        'plan' => $plan
-    ]);
-}
-
-// جلب الإعلان النشط
+    // جلب الإعلان النشط
     public function getActiveAnnouncement()
     {
         try {
@@ -95,17 +98,17 @@ class SaaSController extends Controller
     }
 
     // التحقق من الكوبون
-    public function validatePromoCode(\Illuminate\Http\Request $request)
+    public function validatePromoCode(Request $request)
     {
         $request->validate(['code' => 'required|string']);
 
-        $promo = \App\Models\PromoCode::where('code', strtoupper($request->code))->first();
+        $promo = PromoCode::where('code', strtoupper($request->code))->first();
 
-        if (!$promo) {
+        if (! $promo) {
             return response()->json(['success' => false, 'message' => 'الكوبون غير صحيح.'], 404);
         }
 
-        if (!$promo->is_active) {
+        if (! $promo->is_active) {
             return response()->json(['success' => false, 'message' => 'الكوبون غير فعال.'], 400);
         }
 
@@ -120,7 +123,7 @@ class SaaSController extends Controller
         return response()->json([
             'success' => true,
             'discount_percentage' => $promo->discount_percentage,
-            'message' => "تم تطبيق خصم {$promo->discount_percentage}% بنجاح!"
+            'message' => "تم تطبيق خصم {$promo->discount_percentage}% بنجاح!",
         ]);
     }
 }

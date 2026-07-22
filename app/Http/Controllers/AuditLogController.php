@@ -1,7 +1,8 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use App\Models\AuditLog;
+use App\Saas\Models\AuditLog;
 use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
@@ -11,6 +12,6 @@ class AuditLogController extends Controller
         // استخدام simplePaginate هو الأسرع والأقل استهلاكاً للـ RAM
         return AuditLog::where('user_id', $request->user()->id)
             ->latest()
-            ->simplePaginate(30); 
+            ->simplePaginate(30);
     }
 }

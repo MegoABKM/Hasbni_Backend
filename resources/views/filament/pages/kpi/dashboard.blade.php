@@ -41,20 +41,28 @@
         </section>
 
         @livewire(
-            \App\Filament\Widgets\Kpi\KpiStatsOverview::class,
+            \App\Saas\Filament\Widgets\Kpi\KpiStatsOverview::class,
             ['department' => 'saas', 'pageFilters' => $filters],
             key("kpi-stats-saas-{$filterChecksum}")
         )
 
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div class="grid grid-cols-1 gap-6">
             @livewire(
-                \App\Filament\Widgets\Kpi\KpiChartWidget::class,
+                \App\Saas\Filament\Widgets\Kpi\KpiChartWidget::class,
                 ['department' => 'saas', 'chartIndex' => 0, 'pageFilters' => $filters],
                 key("kpi-chart-mrr-{$filterChecksum}")
             )
 
             @livewire(
-                \App\Filament\Widgets\Kpi\KpiChartWidget::class,
+                \App\Saas\Filament\Widgets\Kpi\MrrMovementChartWidget::class,
+                ['department' => 'saas', 'pageFilters' => $filters],
+                key("kpi-chart-mrr-movements-{$filterChecksum}")
+            )
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            @livewire(
+                \App\Saas\Filament\Widgets\Kpi\KpiChartWidget::class,
                 ['department' => 'saas', 'chartIndex' => 1, 'pageFilters' => $filters],
                 key("kpi-chart-movement-{$filterChecksum}")
             )

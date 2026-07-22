@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Saas\Models\Payment;
+use App\Saas\Models\Subscription;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;

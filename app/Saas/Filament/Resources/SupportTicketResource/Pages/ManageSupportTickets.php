@@ -1,0 +1,16 @@
+<?php
+
+namespace App\Saas\Filament\Resources\SupportTicketResource\Pages;
+
+use App\Saas\Filament\Resources\SupportTicketResource;
+use Filament\Resources\Pages\ManageRecords;
+
+class ManageSupportTickets extends ManageRecords
+{
+    protected static string $resource = SupportTicketResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [];
+    }
+}

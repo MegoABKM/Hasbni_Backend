@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\SupportTicket;
+use App\Saas\Models\SupportTicket;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;

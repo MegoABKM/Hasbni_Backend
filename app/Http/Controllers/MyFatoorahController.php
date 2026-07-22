@@ -1,16 +1,18 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Saas\Models\Payment;
+use App\Saas\Models\Plan;
+use App\Saas\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Models\Payment;
 use Illuminate\Support\Facades\Log;
 
 class MyFatoorahController extends Controller
 {
     private $baseUrl;
+
     private $apiKey;
 
     public function __construct()
@@ -30,25 +32,25 @@ class MyFatoorahController extends Controller
 
         $user = $request->user();
         $plan = Plan::findOrFail($request->plan_id);
-        
+
         $amount = $request->cycle === 'yearly' ? $plan->yearly_price : $plan->monthly_price;
 
         $response = Http::withToken($this->apiKey)->post("{$this->baseUrl}/v2/SendPayment", [
             'NotificationOption' => 'LNK',
-            'InvoiceValue'       => $amount,
-            'CustomerName'       => $user->name,
+            'InvoiceValue' => $amount,
+            'CustomerName' => $user->name,
             'DisplayCurrencyIso' => 'USD',
-            'CustomerEmail'      => $user->email,
-            'CallBackUrl'        => url('/api/webhooks/myfatoorah/callback'),
-            'ErrorUrl'           => url('/api/webhooks/myfatoorah/callback'),
-            'Language'           => 'ar',
-            'UserDefinedField'   => $user->id . '|' . $plan->id . '|' . $request->cycle, // تمرير بيانات العميل والباقة خفية
+            'CustomerEmail' => $user->email,
+            'CallBackUrl' => url('/api/webhooks/myfatoorah/callback'),
+            'ErrorUrl' => url('/api/webhooks/myfatoorah/callback'),
+            'Language' => 'ar',
+            'UserDefinedField' => $user->id.'|'.$plan->id.'|'.$request->cycle, // تمرير بيانات العميل والباقة خفية
         ]);
 
         if ($response->successful() && $response->json('IsSuccess') === true) {
             return response()->json([
                 'success' => true,
-                'payment_url' => $response->json('Data.InvoiceURL')
+                'payment_url' => $response->json('Data.InvoiceURL'),
             ]);
         }
 
@@ -59,20 +61,20 @@ class MyFatoorahController extends Controller
     public function callback(Request $request)
     {
         $paymentId = $request->query('paymentId');
-        
-        if (!$paymentId) {
+
+        if (! $paymentId) {
             return response()->json(['error' => 'No payment ID provided'], 400);
         }
 
         $response = Http::withToken($this->apiKey)->post("{$this->baseUrl}/v2/getPaymentStatus", [
             'Key' => $paymentId,
-            'KeyType' => 'PaymentId'
+            'KeyType' => 'PaymentId',
         ]);
 
         $data = $response->json();
 
         if ($data['IsSuccess'] === true && $data['Data']['InvoiceStatus'] === 'Paid') {
-            
+
             $customData = explode('|', $data['Data']['UserDefinedField']); // استرجاع البيانات الخفية
             $userId = $customData[0] ?? null;
             $planId = $customData[1] ?? null;
@@ -81,7 +83,9 @@ class MyFatoorahController extends Controller
             if ($userId && $planId) {
                 // منع تسجيل الدفعة مرتين
                 $existing = Payment::where('transaction_id', $paymentId)->first();
-                if($existing) return response()->json(['success' => true]);
+                if ($existing) {
+                    return response()->json(['success' => true]);
+                }
 
                 $daysToAdd = $cycle === 'yearly' ? 365 : 30;
 
@@ -110,7 +114,7 @@ class MyFatoorahController extends Controller
                 ]);
 
                 Log::info("MyFatoorah Payment Success for User ID: {$userId}");
-                
+
                 // يمكنك توجيه المستخدم لصفحة نجاح أو إرجاع رسالة JSON حسب حاجتك في فلاتر
                 return response()->json(['success' => true, 'message' => 'Payment Successful! Subscription Active.']);
             }

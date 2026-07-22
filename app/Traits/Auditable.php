@@ -1,16 +1,19 @@
 <?php
+
 namespace App\Traits;
 
-use App\Models\AuditLog;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Arr;
+use App\Saas\Models\AuditLog;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * @mixin Model
+ *
  * @method static void created(\Closure|string|array $callback)
  * @method static void updated(\Closure|string|array $callback)
  * @method static void deleted(\Closure|string|array $callback)
+ *
  * @property int|string|null $id
  */
 trait Auditable
@@ -30,9 +33,6 @@ trait Auditable
         });
     }
 
-    /**
-     * @param string $event
-     */
     protected function logAudit(string $event)
     {
         $oldValues = [];
@@ -45,9 +45,11 @@ trait Auditable
             $newValues = Arr::except($this->getAttributes(), $ignored);
         } elseif ($event === 'updated') {
             $changes = Arr::except($this->getChanges(), $ignored);
-            
+
             // إذا لم يتغير شيء محاسبي (مثلاً تغير الوقت فقط)، لا تسجل شيء لتوفير الـ RAM
-            if (empty($changes)) return; 
+            if (empty($changes)) {
+                return;
+            }
 
             $newValues = $changes;
             foreach ($changes as $key => $value) {

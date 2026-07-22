@@ -1,10 +1,11 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Saas\Models\Payment;
+use App\Saas\Models\Plan;
+use App\Saas\Models\Subscription;
 use Illuminate\Http\Request;
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Models\Payment;
 use Illuminate\Support\Facades\Log;
 
 class GooglePlayController extends Controller
@@ -31,10 +32,10 @@ class GooglePlayController extends Controller
 
         // 2. تحديد الباقة (نفترض أنك سميت الباقات في جوجل بلاي pro_monthly و pro_yearly)
         $isYearly = str_contains($request->product_id, 'yearly');
-        
+
         // جلب باقة Pro من قاعدة بياناتنا
         $plan = Plan::where('name', 'Pro')->first();
-        if (!$plan) {
+        if (! $plan) {
             return response()->json(['error' => 'Plan not found in database'], 404);
         }
 

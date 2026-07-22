@@ -331,5 +331,11 @@
     "Amount Paid": "Amount Paid",
     "Thank you for your business.": "Thank you for your business.",
     "Your support request has received a new reply.": "Your support request has received a new reply.",
-    "Ticket": "Ticket"
+    "Ticket": "Ticket",
+    "kpi.metric.new_mrr": "New MRR",
+    "kpi.metric.expansion_mrr": "Expansion MRR",
+    "kpi.metric.contraction_mrr": "Contraction MRR",
+    "kpi.metric.churned_mrr": "Churned MRR",
+    "kpi.chart.mrr_movements": "MRR Movements",
+    "kpi.chart.mrr_movements.description": "Daily changes in recurring revenue by movement type."
 }

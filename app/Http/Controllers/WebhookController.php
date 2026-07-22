@@ -1,12 +1,13 @@
 <?php
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
-use App\Models\Plan;
-use App\Models\Subscription;
-use App\Models\Payment;
-use App\Models\PromoCode;
+use App\Saas\Models\Payment;
+use App\Saas\Models\Plan;
+use App\Saas\Models\PromoCode;
+use App\Saas\Models\Subscription;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class WebhookController extends Controller
@@ -31,17 +32,20 @@ class WebhookController extends Controller
 
             $user = User::where('id', $userId)->orWhere('email', $email)->first();
 
-            if (!$user) {
+            if (! $user) {
                 Log::error('Stripe Webhook: User not found', ['email' => $email]);
+
                 return response()->json(['error' => 'User not found'], 404);
             }
 
             // المبلغ المدفوع (Stripe يرسل المبلغ بالسنت، لذلك نقسم على 100)
             $amountPaid = $session['amount_total'] / 100;
-            
+
             // تحديد الباقة بناءً على السعر الذي تم دفعه
             $plan = Plan::where('monthly_price', $amountPaid)->orWhere('yearly_price', $amountPaid)->first();
-            if (!$plan) $plan = Plan::where('name', 'Pro')->first(); // باقة افتراضية للحماية
+            if (! $plan) {
+                $plan = Plan::where('name', 'Pro')->first();
+            } // باقة افتراضية للحماية
 
             $cycle = ($amountPaid == $plan->yearly_price) ? 'yearly' : 'monthly';
             $daysToAdd = $cycle === 'yearly' ? 365 : 30;
@@ -59,18 +63,18 @@ class WebhookController extends Controller
             );
 
             // 2. تسجيل الفاتورة لتظهر لك في لوحة تحكم Filament
-            
-            $promoCodeStr = $session['customer_details']['discount']['coupon']['name'] ?? null; // حسب طريقة تمريرك له في Stripe
-$promoCodeId = null;
 
-if ($promoCodeStr) {
-    $promo = PromoCode::where('code', $promoCodeStr)->first();
-    if ($promo) {
-        $promoCodeId = $promo->id;
-        // زيادة عدد الاستخدامات
-        $promo->increment('current_uses');
-    }
-}
+            $promoCodeStr = $session['customer_details']['discount']['coupon']['name'] ?? null; // حسب طريقة تمريرك له في Stripe
+            $promoCodeId = null;
+
+            if ($promoCodeStr) {
+                $promo = PromoCode::where('code', $promoCodeStr)->first();
+                if ($promo) {
+                    $promoCodeId = $promo->id;
+                    // زيادة عدد الاستخدامات
+                    $promo->increment('current_uses');
+                }
+            }
 
             Payment::create([
                 'user_id' => $user->id,
@@ -122,7 +126,7 @@ if ($promoCodeStr) {
             return false;
         }
 
-        $expected = hash_hmac('sha256', $timestamp . '.' . $request->getContent(), $secret);
+        $expected = hash_hmac('sha256', $timestamp.'.'.$request->getContent(), $secret);
 
         foreach ($signatures as $signature) {
             if (hash_equals($expected, $signature)) {

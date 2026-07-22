@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Payment;
-use App\Models\Plan;
-use App\Models\Subscription;
 use App\Models\User;
-use App\Services\KpiService;
+use App\Saas\Models\Payment;
+use App\Saas\Models\Plan;
+use App\Saas\Models\Subscription;
+use App\Saas\Services\KpiService;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
