@@ -31,10 +31,15 @@ class AuditLogsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('created_at')->label('Time')->dateTime()->sortable(),
                 TextColumn::make('event')
                     ->label('Action')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32)
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'created' => 'success',
@@ -46,8 +51,16 @@ class AuditLogsRelationManager extends RelationManager
                     }),
                 TextColumn::make('auditable_type')
                     ->label('Target')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32)
                     ->formatStateUsing(fn (string $state) => class_basename($state)),
-                TextColumn::make('ip_address'),
+                TextColumn::make('ip_address')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(40),
             ])
             ->headerActions([]) // لا يمكن إنشاء سجل يدوياً
             ->actions([

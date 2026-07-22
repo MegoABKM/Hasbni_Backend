@@ -10,3 +10,7 @@ Artisan::command('inspire', function () {
 
 // 👈 إضافة أمر التنظيف ليتم تشغيله يومياً
 Schedule::command('model:prune')->daily();
+
+Schedule::call(function () {
+    \App\Models\User::whereNull('email_verified_at')->where('created_at', '<', now()->subDay())->delete();
+})->daily();

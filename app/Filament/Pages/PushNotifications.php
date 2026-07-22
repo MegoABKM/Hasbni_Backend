@@ -21,8 +21,6 @@ class PushNotifications extends Page implements HasForms
     protected string $view = 'filament.pages.push-notifications';
     
     public static function getNavigationIcon(): string { return 'heroicon-o-bell-alert'; }
-    
-    // 🚀 تم إصلاح المجموعة والترجمة هنا 🚀
     public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
     public static function getNavigationLabel(): string { return __('Push Notifications'); }
     public function getTitle(): string { return __('Push Notifications'); }
@@ -60,10 +58,10 @@ class PushNotifications extends Page implements HasForms
             default => 'all_users',
         };
 
-        $projectId = env('FIREBASE_PROJECT_ID');
         $credentialsPath = null;
         $firebaseFileKey = AppConfig::where('key', 'firebase_json')->value('value');
 
+        // Locate the JSON file
         if ($firebaseFileKey && file_exists(storage_path('app/' . $firebaseFileKey))) {
             $credentialsPath = storage_path('app/' . $firebaseFileKey);
         } 
@@ -71,12 +69,22 @@ class PushNotifications extends Page implements HasForms
             $credentialsPath = storage_path('app/firebase-auth.json');
         }
 
+        // Check if file was found BEFORE reading it
         if (!$credentialsPath) {
             Notification::make()
                 ->title('Firebase JSON Missing!')
                 ->body('لم يتم العثور على ملف الصلاحيات. يرجى رفعه من الإعدادات.')
                 ->danger()
                 ->send();
+            return;
+        }
+
+        // 🚀 Fix: Now we safely read the file to get the project ID dynamically
+        $jsonContent = json_decode(file_get_contents($credentialsPath), true);
+        $projectId = $jsonContent['project_id'] ?? null;
+
+        if (!$projectId) {
+            Notification::make()->title('Invalid Firebase JSON')->body('Missing project_id in JSON')->danger()->send();
             return;
         }
 

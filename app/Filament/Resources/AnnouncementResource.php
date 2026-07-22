@@ -12,7 +12,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Schemas\Schema;
+use Filament\Schemas\Schema; // 👈 تم العودة لاستخدام نسختك الخاصة
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -36,9 +36,9 @@ class AnnouncementResource extends Resource
         return __('Announcements');
     }
 
-    public static function form(Schema $schema): Schema
+    public static function form(Schema $schema): Schema // 👈 التعديل ليتوافق مع نسختك
     {
-        return $schema->components([
+        return $schema->components([ // 👈 التعديل ليتوافق مع نسختك
             TextInput::make('title')
                 ->label(__('Title'))
                 ->required()
@@ -114,7 +114,7 @@ class AnnouncementResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->recordActions([
+            ->recordActions([ // 👈 التعديل ليتوافق مع نسختك
                 EditAction::make(),
                 DeleteAction::make()->requiresConfirmation(),
             ]);

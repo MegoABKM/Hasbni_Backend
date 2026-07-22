@@ -34,10 +34,21 @@ class SalesRelationManager extends RelationManager
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('invoice_number')->searchable(),
-                TextColumn::make('total_price')->sortable(),
-                TextColumn::make('currency_code'),
+                TextColumn::make('invoice_number')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32),
+                TextColumn::make('total_price')
+                    ->sortable(),
+                TextColumn::make('currency_code')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('gray'),
                 TextColumn::make('payment_status')
+                    ->searchable()
+                    ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'paid' => 'success',
@@ -47,7 +58,9 @@ class SalesRelationManager extends RelationManager
                         default => 'primary',
                     }),
                 IconColumn::make('has_returns')->boolean(),
-                TextColumn::make('created_at')->dateTime()->sortable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
                 //

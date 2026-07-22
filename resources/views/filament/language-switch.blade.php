@@ -1,14 +1,12 @@
-<!-- resources/views/filament/language-switch.blade.php -->
 @php
-    // جلب اللغة الحالية (سواء من السشن أو الافتراضية)
     $currentLocale = session()->get('locale', app()->getLocale());
     $targetLocale = $currentLocale === 'ar' ? 'en' : 'ar';
 @endphp
 
 <a href="{{ url('switch-language/' . $targetLocale) }}" 
-   style="margin-inline-end: 1rem; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background-color: rgba(128, 128, 128, 0.1); text-decoration: none; border: 1px solid rgba(128,128,128,0.2);"
-   title="تغيير اللغة">
-    <span style="font-weight: bold; font-size: 14px; color: #a1a1aa;">
+   class="me-4 flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 transition-colors hover:bg-gray-100 dark:hover:bg-white/5"
+   title="{{ $currentLocale === 'ar' ? 'Switch to English' : 'تغيير للغة العربية' }}">
+    <span class="font-bold text-sm text-primary-600 dark:text-primary-400">
         {{ $currentLocale === 'ar' ? 'EN' : 'AR' }}
     </span>
 </a>

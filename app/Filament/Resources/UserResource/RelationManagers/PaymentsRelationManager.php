@@ -52,9 +52,23 @@ class PaymentsRelationManager extends RelationManager
             ->recordTitleAttribute('transaction_id')
             ->defaultSort('paid_at', 'desc')
             ->columns([
-                TextColumn::make('amount')->money('usd')->sortable(),
-                TextColumn::make('payment_method')->badge()->color('gray'),
+                TextColumn::make('amount')
+                    ->money('usd')
+                    ->sortable(),
+                TextColumn::make('payment_method')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'stripe' => 'info',
+                        'paypal' => 'primary',
+                        'myfatoorah' => 'success',
+                        'manual' => 'gray',
+                        default => 'gray',
+                    }),
                 TextColumn::make('status')
+                    ->searchable()
+                    ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'successful' => 'success',
@@ -66,13 +80,24 @@ class PaymentsRelationManager extends RelationManager
                 TextColumn::make('failure_reason')
                     ->label('Error Log')
                     ->limit(30)
+                    ->wrap()
                     ->tooltip(function (TextColumn $column): ?string {
                         $state = $column->getState();
                         return strlen((string)$state) > 30 ? $state : null;
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('paid_at')->dateTime()->sortable(),
+                TextColumn::make('transaction_id')
+                    ->label('Transaction ID')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32)
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('paid_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->headerActions([
                 CreateAction::make()->label('Add Payment'),

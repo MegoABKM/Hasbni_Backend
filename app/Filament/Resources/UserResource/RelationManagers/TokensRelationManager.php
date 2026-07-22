@@ -25,6 +25,9 @@ class TokensRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->label('Device Name')
                     ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(36)
                     ->badge()
                     ->color('primary')
                     ->icon('heroicon-o-computer-desktop'),
@@ -38,6 +41,7 @@ class TokensRelationManager extends RelationManager
                     ->label('Last Activity')
                     ->dateTime()
                     ->sortable()
+                    ->wrap()
                     ->placeholder('Never used'),
             ])
             ->filters([

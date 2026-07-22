@@ -11,121 +11,84 @@ use App\Models\Subscription;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ExecutiveDashboardMetrics
 {
     public const PERIOD_DAYS = 30;
 
-    public static function currentStart(): Carbon
-    {
-        return now()->subDays(self::PERIOD_DAYS);
-    }
-
-    public static function previousStart(): Carbon
-    {
-        return now()->subDays(self::PERIOD_DAYS * 2);
-    }
-
-    public static function previousEnd(): Carbon
-    {
-        return self::currentStart();
-    }
+    public static function currentStart(): Carbon { return now()->subDays(self::PERIOD_DAYS); }
+    public static function previousStart(): Carbon { return now()->subDays(self::PERIOD_DAYS * 2); }
+    public static function previousEnd(): Carbon { return self::currentStart(); }
 
     public static function percentChange(float|int $current, float|int $previous): ?float
     {
         if ((float) $previous === 0.0) {
             return (float) $current === 0.0 ? 0.0 : null;
         }
-
         return (($current - $previous) / abs($previous)) * 100;
     }
 
     public static function formatPercentChange(?float $change): string
     {
-        if ($change === null) {
-            return 'new activity';
-        }
-
-        if (abs($change) < 0.05) {
-            return 'stable';
-        }
-
+        if ($change === null) return 'new activity';
+        if (abs($change) < 0.05) return 'stable';
         return ($change > 0 ? '+' : '') . number_format($change, 1) . '%';
     }
 
     public static function trendIcon(float|int $current, float|int $previous, bool $higherIsBetter = true): string
     {
-        if (abs($current - $previous) < 0.0001) {
-            return 'heroicon-m-minus';
-        }
-
-        $isUp = $current > $previous;
-
-        return $isUp
-            ? 'heroicon-m-arrow-trending-up'
-            : 'heroicon-m-arrow-trending-down';
+        if (abs($current - $previous) < 0.0001) return 'heroicon-m-minus';
+        return ($current > $previous) ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down';
     }
 
     public static function trendColor(float|int $current, float|int $previous, bool $higherIsBetter = true): string
     {
-        if (abs($current - $previous) < 0.0001) {
-            return 'gray';
-        }
-
+        if (abs($current - $previous) < 0.0001) return 'gray';
         $improved = $higherIsBetter ? $current > $previous : $current < $previous;
-
         return $improved ? 'success' : 'danger';
     }
 
-    public static function comparison(float|int $current, float|int $previous, string $previousLabel = 'previous 30 days'): string
+    public static function comparison(float|int $current, float|int $previous, string $previousLabel = 'previous 30 days'): Htmlable
     {
-        return self::formatPercentChange(self::percentChange($current, $previous)) . ' vs ' . $previousLabel
-            . ' | updated ' . now()->format('H:i');
+        $change = self::formatPercentChange(self::percentChange($current, $previous));
+        $time = now()->format('H:i');
+        return new HtmlString("<span dir='ltr' style='display:inline-block'>{$change} vs {$previousLabel} | updated {$time}</span>");
     }
 
     public static function money(float|int $amount): string
     {
         $amount = (float) $amount;
-
-        if (abs($amount) >= 1000000) {
-            return '$' . number_format($amount / 1000000, 2) . 'M';
-        }
-
-        if (abs($amount) >= 10000) {
-            return '$' . number_format($amount / 1000, 1) . 'K';
-        }
-
+        if (abs($amount) >= 1000000) return '$' . number_format($amount / 1000000, 2) . 'M';
+        if (abs($amount) >= 10000) return '$' . number_format($amount / 1000, 1) . 'K';
         return '$' . number_format($amount, 2);
     }
 
-    public static function successfulPaymentsQuery(Carbon $start, Carbon $end): Builder
-    {
-        return Payment::query()
-            ->where('status', 'successful')
-            ->whereBetween('paid_at', [$start, $end]);
-    }
-
-    public static function salesQuery(Carbon $start, Carbon $end): Builder
-    {
-        return Sale::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('payment_status', '!=', 'voided');
-    }
-
+    // 🚀 SaaS Platform Subscription Income (From `payments` table)
     public static function platformRevenue(Carbon $start, Carbon $end): float
     {
-        return (float) self::successfulPaymentsQuery($start, $end)->sum('amount');
+        return (float) Payment::query()
+            ->where('status', 'successful')
+            ->whereBetween('paid_at', [$start, $end])
+            ->sum('amount');
     }
 
+    // 🚀 Tenant POS Sales Volume (From `sales` table, kept separate)
     public static function posRevenue(Carbon $start, Carbon $end): float
     {
-        return (float) self::salesQuery($start, $end)
+        return (float) Sale::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('payment_status', '!=', 'voided')
             ->sum(DB::raw('total_price / CASE WHEN rate_to_usd_at_sale > 0 THEN rate_to_usd_at_sale ELSE 1 END'));
     }
 
     public static function grossProfit(Carbon $start, Carbon $end): float
     {
-        return (float) self::salesQuery($start, $end)->sum('total_profit');
+        return (float) Sale::query()
+            ->whereBetween('created_at', [$start, $end])
+            ->where('payment_status', '!=', 'voided')
+            ->sum('total_profit');
     }
 
     public static function operatingExpenses(Carbon $start, Carbon $end): float
@@ -167,37 +130,26 @@ class ExecutiveDashboardMetrics
 
     public static function lowStockCount(): int
     {
-        return Product::query()
-            ->whereColumn('quantity', '<=', 'alert_threshold')
-            ->count();
+        return Product::query()->whereColumn('quantity', '<=', 'alert_threshold')->count();
     }
 
     public static function outOfStockCount(): int
     {
-        return Product::query()
-            ->where('quantity', '<=', 0)
-            ->count();
+        return Product::query()->where('quantity', '<=', 0)->count();
     }
 
     public static function outstandingCustomerBalance(): float
     {
-        return (float) Customer::query()
-            ->where('balance', '>', 0)
-            ->sum('balance');
+        return (float) Customer::query()->where('balance', '>', 0)->sum('balance');
     }
 
-    /**
-     * @return array<int, float>
-     */
     public static function dailySeries(callable $resolver, int $days = 7): array
     {
         $series = [];
-
         for ($index = $days - 1; $index >= 0; $index--) {
             $date = now()->subDays($index)->toDateString();
             $series[] = round((float) $resolver($date), 2);
         }
-
         return $series;
     }
 }

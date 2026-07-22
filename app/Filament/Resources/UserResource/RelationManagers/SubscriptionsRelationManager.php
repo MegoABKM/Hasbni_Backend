@@ -27,7 +27,12 @@ class SubscriptionsRelationManager extends RelationManager
         return $schema->schema([
             Select::make('plan_id')
                 ->label('Plan')
-                ->options(Plan::all()->pluck('name', 'id'))
+                ->options(fn (): array => Plan::query()
+                    ->orderBy('name')
+                    ->pluck('name', 'id')
+                    ->all())
+                ->searchable()
+                ->preload()
                 ->required(),
             Select::make('status')
                 ->options(['active' => 'Active', 'expired' => 'Expired', 'canceled' => 'Canceled'])
@@ -48,17 +53,39 @@ class SubscriptionsRelationManager extends RelationManager
             ->recordTitleAttribute('status')
             ->defaultSort('ends_at', 'desc')
             ->columns([
-                TextColumn::make('plan.name')->badge()->color('primary'),
-                TextColumn::make('status')->badge()
+                TextColumn::make('plan.name')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32)
+                    ->badge()
+                    ->color('primary'),
+                TextColumn::make('status')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'active' => 'success',
                         'expired' => 'danger',
                         'canceled' => 'warning',
                         default => 'gray'
                     }),
-                TextColumn::make('billing_cycle'),
-                TextColumn::make('starts_at')->date(),
-                TextColumn::make('ends_at')->date(),
+                TextColumn::make('billing_cycle')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'yearly' => 'success',
+                        'monthly' => 'info',
+                        'lifetime' => 'warning',
+                        default => 'gray',
+                    }),
+                TextColumn::make('starts_at')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('ends_at')
+                    ->date()
+                    ->sortable(),
             ])
             ->headerActions([ 
                 CreateAction::make()->label('Assign Plan') 

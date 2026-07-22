@@ -31,11 +31,24 @@ class ProductsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable(),
-                TextColumn::make('barcode')->searchable(),
-                TextColumn::make('quantity')->sortable(),
-                TextColumn::make('cost_price')->sortable(),
-                TextColumn::make('selling_price')->sortable(),
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(40),
+                TextColumn::make('barcode')
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(28),
+                TextColumn::make('quantity')
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (int|float|string|null $state): string => ((float) $state) > 0 ? 'success' : 'danger'),
+                TextColumn::make('cost_price')
+                    ->sortable(),
+                TextColumn::make('selling_price')
+                    ->sortable(),
             ])
             ->filters([
                 //

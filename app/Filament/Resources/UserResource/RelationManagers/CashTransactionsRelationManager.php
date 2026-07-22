@@ -29,10 +29,28 @@ class CashTransactionsRelationManager extends RelationManager
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('transaction_type')->badge()->searchable(),
-                TextColumn::make('amount')->sortable(),
-                TextColumn::make('currency_code'),
-                TextColumn::make('created_at')->dateTime()->sortable(),
+                TextColumn::make('transaction_type')
+                    ->badge()
+                    ->searchable()
+                    ->sortable()
+                    ->wrap()
+                    ->limit(32)
+                    ->color(fn (string $state): string => match ($state) {
+                        'sale', 'deposit', 'cash_in', 'income' => 'success',
+                        'refund', 'adjustment' => 'warning',
+                        'expense', 'withdrawal', 'cash_out' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('amount')
+                    ->sortable(),
+                TextColumn::make('currency_code')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('gray'),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->actions([ ViewAction::make() ]);
     }

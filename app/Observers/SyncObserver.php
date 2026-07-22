@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Observers;
 
@@ -23,9 +23,11 @@ class SyncObserver
         if (!$userId) return;
 
         $senderDeviceId = request()->header('X-Device-ID');
-        
+
+        // ðŸš€ FIX: afterResponse ensures the API returns to the phone instantly
+        // without waiting for Firebase to reply, keeping the App lightning fast.
         dispatch(function () use ($userId, $senderDeviceId) {
             app(FcmService::class)->sendSilentUpdate($userId, $senderDeviceId);
-        })->afterResponse(); 
+        })->afterResponse();
     }
 }
