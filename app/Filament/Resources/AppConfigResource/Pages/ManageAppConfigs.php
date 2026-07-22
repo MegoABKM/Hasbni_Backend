@@ -8,7 +8,6 @@ use Filament\Resources\Pages\ManageRecords;
 
 class ManageAppConfigs extends ManageRecords
 {
-    // 🚀 هذا هو المتغير الذي كان يطلبه الخطأ 🚀
     protected static string $resource = AppConfigResource::class;
 
     protected function getHeaderActions(): array

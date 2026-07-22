@@ -1,57 +1,49 @@
 <?php
+
 namespace App\Filament\Widgets;
 
+use App\Models\Payment;
+use App\Models\Subscription;
+use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class SystemOverviewWidget extends BaseWidget
 {
     protected static bool $isDiscovered = false;
 
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 5;
 
     protected function getStats(): array
     {
-        $activeTenantsToday = User::whereDate('updated_at', Carbon::today())->count();
-        $activeTenantsWeek = User::whereDate('updated_at', '>=', Carbon::now()->subDays(7))->count();
-
-        $dbName = env('DB_DATABASE');
-        $dbSizeMB = 0;
-        
-        try {
-            $result = DB::select("
-                SELECT SUM(data_length + index_length) / 1024 / 1024 AS size 
-                FROM information_schema.TABLES 
-                WHERE table_schema = ?
-            ", [$dbName]);
-            
-            $dbSizeMB = round($result[0]->size ?? 0, 2);
-        } catch (\Exception $e) {
-            $dbSizeMB = 'N/A';
-        }
-
-        $sizeColor = 'success';
-        if ($dbSizeMB > 500) $sizeColor = 'warning';
-        if ($dbSizeMB > 1000) $sizeColor = 'danger';
+        $stats = Cache::remember('saas:system-overview:v1', 300, fn (): array => [
+            'tenants' => User::query()->tenants()->count(),
+            'new_tenants' => User::query()->tenants()->where('created_at', '>=', now()->subDays(30))->count(),
+            'active_subscriptions' => Subscription::query()->activeAt(now())->count(),
+            'monthly_revenue' => Payment::query()
+                ->successful()
+                ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
+                ->sum('amount'),
+        ]);
 
         return [
-            Stat::make(__('Active Tenants (Today)'), $activeTenantsToday)
-                ->description($activeTenantsWeek . ' ' . __('active this week'))
-                ->descriptionIcon('heroicon-m-arrow-path')
-                ->color('success'),
-
-            Stat::make(__('Database Size'), $dbSizeMB . ' MB')
-                ->description(__('Total server storage used'))
-                ->descriptionIcon('heroicon-m-server-stack')
-                ->color($sizeColor),
-                
-            Stat::make(__('Total Registered Shops'), User::where('role', 'shop_owner')->count())
-                ->description(__('All time registrations'))
-                ->descriptionIcon('heroicon-m-building-storefront')
+            Stat::make(__('Total Tenants'), number_format($stats['tenants']))
+                ->description(__('Registered tenant accounts'))
+                ->descriptionIcon('heroicon-m-building-office-2')
                 ->color('primary'),
+            Stat::make(__('New Tenants'), number_format($stats['new_tenants']))
+                ->description(__('Registered in the last 30 days'))
+                ->descriptionIcon('heroicon-m-user-plus')
+                ->color('info'),
+            Stat::make(__('Active Subscriptions'), number_format($stats['active_subscriptions']))
+                ->description(__('Currently active paid access'))
+                ->descriptionIcon('heroicon-m-check-badge')
+                ->color('success'),
+            Stat::make(__('Revenue This Month'), '$'.number_format((float) $stats['monthly_revenue'], 2))
+                ->description(__('Successful subscription payments'))
+                ->descriptionIcon('heroicon-m-banknotes')
+                ->color('warning'),
         ];
     }
 }

@@ -4,8 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PaymentResource\Pages;
 use App\Models\Payment;
-use App\Models\Subscription;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -13,21 +11,21 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Http;
 
 class PaymentResource extends Resource
 {
     protected static ?string $model = Payment::class;
 
-    public static function getNavigationIcon(): ?string
+    public static function getNavigationIcon(): string
     {
         return 'heroicon-o-banknotes';
     }
@@ -55,58 +53,59 @@ class PaymentResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Select::make('user_id')
-                ->relationship('user', 'name')
-                ->label(__('User'))
-                ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->name} ({$record->email}) - ".__('ID').": {$record->id}")
-                ->required()
-                ->searchable(),
-
-            TextInput::make('amount')
-                ->label(__('Amount'))
-                ->numeric()
-                ->prefix('$')
-                ->required(),
-
-            TextInput::make('currency')
-                ->label(__('Currency'))
-                ->default('USD')
-                ->required(),
-
-            Select::make('payment_method')
-                ->label(__('Payment Method'))
-                ->options([
-                    'manual' => __('Manual'),
-                    'stripe' => __('Stripe'),
-                    'paypal' => __('PayPal'),
-                    'myfatoorah' => __('MyFatoorah'),
-                ])
-                ->default('manual')
-                ->required(),
-
-            Select::make('status')
-                ->label(__('Status'))
-                ->options([
-                    'successful' => __('Successful'),
-                    'failed' => __('Failed'),
-                    'refunded' => __('Refunded'),
-                ])
-                ->default('successful')
-                ->required(),
-
-            TextInput::make('transaction_id')
-                ->label(__('Transaction ID')),
-
-            DateTimePicker::make('paid_at')
-                ->label(__('Paid At'))
-                ->default(now())
-                ->required(),
-
-            Textarea::make('failure_reason')
-                ->label(__('Failure Log'))
-                ->disabled()
-                ->columnSpanFull()
-                ->visible(fn ($get): bool => $get('status') === 'failed'),
+            Section::make(__('Payment Details'))
+                ->schema([
+                    Grid::make([
+                        'default' => 1,
+                        'md' => 2,
+                    ])->schema([
+                        Select::make('user_id')
+                            ->label(__('Tenant'))
+                            ->relationship(
+                                name: 'user',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn (Builder $query): Builder => $query->where('role', 'tenant'),
+                            )
+                            ->getOptionLabelFromRecordUsing(
+                                fn ($record): string => "{$record->name} ({$record->email})",
+                            )
+                            ->searchable(['name', 'email'])
+                            ->preload()
+                            ->required(),
+                        TextInput::make('amount')
+                            ->label(__('Amount'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+                        TextInput::make('currency')
+                            ->label(__('Currency'))
+                            ->default('USD')
+                            ->maxLength(3)
+                            ->required(),
+                        Select::make('payment_method')
+                            ->label(__('Payment Method'))
+                            ->options(self::paymentMethodOptions())
+                            ->default('manual')
+                            ->required(),
+                        Select::make('status')
+                            ->label(__('Status'))
+                            ->options(self::statusOptions())
+                            ->default('successful')
+                            ->required(),
+                        TextInput::make('transaction_id')
+                            ->label(__('Transaction ID'))
+                            ->maxLength(255),
+                        DateTimePicker::make('paid_at')
+                            ->label(__('Paid At'))
+                            ->default(now())
+                            ->required(),
+                    ]),
+                    Textarea::make('failure_reason')
+                        ->label(__('Failure Log'))
+                        ->rows(4)
+                        ->columnSpanFull()
+                        ->visible(fn (callable $get): bool => $get('status') === 'failed'),
+                ]),
         ]);
     }
 
@@ -115,127 +114,71 @@ class PaymentResource extends Resource
         return $table
             ->defaultSort('paid_at', 'desc')
             ->columns([
-                TextColumn::make('user_id')
+                TextColumn::make('id')
                     ->label(__('ID'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('user.name')
-                    ->label(__('Customer'))
-                    ->description(fn (Payment $record): string => $record->user->email ?? __('No Email'))
-                    ->searchable(['name', 'email'])
+                    ->label(__('Tenant'))
+                    ->description(fn (Payment $record): string => $record->user?->email ?? __('No Email'))
+                    ->searchable()
                     ->sortable(),
-
                 TextColumn::make('amount')
                     ->label(__('Amount'))
-                    ->money('usd')
+                    ->money(fn (Payment $record): string => $record->currency)
                     ->sortable(),
-
                 TextColumn::make('payment_method')
                     ->label(__('Payment Method'))
-                    ->formatStateUsing(fn (string $state): string => __($state))
-                    ->badge()
-                    ->color('gray'),
-
+                    ->formatStateUsing(fn (string $state): string => self::paymentMethodOptions()[$state] ?? $state)
+                    ->badge(),
                 TextColumn::make('status')
                     ->label(__('Status'))
+                    ->formatStateUsing(fn (string $state): string => self::statusOptions()[$state] ?? $state)
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => __($state))
                     ->color(fn (string $state): string => match ($state) {
                         'successful' => 'success',
                         'failed' => 'danger',
                         'refunded' => 'warning',
                         default => 'gray',
                     }),
-
-                TextColumn::make('failure_reason')
-                    ->label(__('Error Log'))
-                    ->limit(30)
+                TextColumn::make('transaction_id')
+                    ->label(__('Transaction ID'))
+                    ->searchable()
+                    ->copyable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
+                TextColumn::make('failure_reason')
+                    ->label(__('Failure Log'))
+                    ->limit(40)
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('paid_at')
                     ->label(__('Paid At'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->label(__('Status'))
+                    ->options(self::statusOptions()),
                 SelectFilter::make('payment_method')
                     ->label(__('Payment Method'))
-                    ->options([
-                        'stripe' => __('Stripe'),
-                        'myfatoorah' => __('MyFatoorah'),
-                        'manual' => __('Manual'),
-                    ]),
-
-                Filter::make('failed_payments')
-                    ->label(__('Failed Payments'))
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query->where('status', 'failed')),
-
+                    ->options(self::paymentMethodOptions()),
                 Filter::make('this_month')
-                    ->label(__('This Month Only'))
-                    ->toggle()
-                    ->query(fn (Builder $query): Builder => $query->where('paid_at', '>=', Carbon::now()->startOfMonth())),
+                    ->label(__('This Month'))
+                    ->query(fn (Builder $query): Builder => $query->whereBetween('paid_at', [
+                        now()->startOfMonth(),
+                        now()->endOfMonth(),
+                    ])),
             ])
             ->recordActions([
-                Action::make('refund')
-                    ->label(__('Issue Refund'))
-                    ->icon('heroicon-o-arrow-uturn-left')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading(__('Process Financial Refund'))
-                    ->modalDescription(__('Are you sure? This will refund the money to the customer via the payment gateway and mark the payment as Refunded.'))
-                    ->visible(fn (Payment $record): bool => $record->status === 'successful')
-                    ->action(function (Payment $record): void {
-                        try {
-                            if ($record->payment_method === 'myfatoorah') {
-                                $response = Http::withToken(env('MYFATOORAH_TOKEN'))->post(env('MYFATOORAH_URL', 'https://apitest.myfatoorah.com').'/v2/MakeRefund', [
-                                    'KeyType' => 'InvoiceId',
-                                    'Key' => $record->transaction_id,
-                                    'RefundChargeOnCustomer' => false,
-                                    'ServiceChargeOnCustomer' => false,
-                                    'Amount' => $record->amount,
-                                    'Comment' => 'Requested via Admin Panel',
-                                ]);
-
-                                if ((! $response->successful()) || (! $response->json('IsSuccess'))) {
-                                    throw new \Exception($response->json('Message') ?? 'MyFatoorah Refund Failed');
-                                }
-                            } elseif ($record->payment_method === 'stripe') {
-                                if (! env('STRIPE_SECRET')) {
-                                    throw new \Exception('Stripe is not configured.');
-                                }
-
-                                $response = Http::asForm()
-                                    ->withToken(env('STRIPE_SECRET'))
-                                    ->post('https://api.stripe.com/v1/refunds', [
-                                        'payment_intent' => $record->transaction_id,
-                                    ]);
-
-                                if (! $response->successful()) {
-                                    throw new \Exception($response->json('error.message') ?? 'Stripe refund failed.');
-                                }
-                            }
-
-                            $record->update(['status' => 'refunded']);
-
-                            if ($record->subscription_id) {
-                                Subscription::where('id', $record->subscription_id)->update(['status' => 'canceled']);
-                            }
-
-                            Notification::make()
-                                ->title(__('Refund processed successfully!'))
-                                ->success()
-                                ->send();
-                        } catch (\Exception $e) {
-                            Notification::make()
-                                ->title(__('Refund Failed'))
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-
+                Action::make('print_receipt')
+                    ->label(__('Print Receipt'))
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->url(
+                        fn (Payment $record): string => route('payment.receipt', $record->getKey()),
+                        shouldOpenInNewTab: true,
+                    ),
                 EditAction::make(),
                 DeleteAction::make(),
             ]);
@@ -247,6 +190,33 @@ class PaymentResource extends Resource
             'index' => Pages\ListPayments::route('/'),
             'create' => Pages\CreatePayment::route('/create'),
             'edit' => Pages\EditPayment::route('/{record}/edit'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function paymentMethodOptions(): array
+    {
+        return [
+            'manual' => __('Manual'),
+            'stripe' => __('Stripe'),
+            'paypal' => __('PayPal'),
+            'myfatoorah' => __('MyFatoorah'),
+            'bank_transfer' => __('Bank Transfer'),
+            'other' => __('Other'),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function statusOptions(): array
+    {
+        return [
+            'successful' => __('Successful'),
+            'failed' => __('Failed'),
+            'refunded' => __('Refunded'),
         ];
     }
 }

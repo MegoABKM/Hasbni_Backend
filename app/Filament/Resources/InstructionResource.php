@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\InstructionResource\Pages\ManageInstructions;
 use App\Models\Instruction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -29,6 +30,16 @@ class InstructionResource extends Resource
     }
 
     public static function getNavigationLabel(): string
+    {
+        return __('Instructions');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Instruction');
+    }
+
+    public static function getPluralModelLabel(): string
     {
         return __('Instructions');
     }
@@ -61,7 +72,7 @@ class InstructionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\InstructionResource\Pages\ManageInstructions::route('/'),
+            'index' => ManageInstructions::route('/'),
         ];
     }
 }

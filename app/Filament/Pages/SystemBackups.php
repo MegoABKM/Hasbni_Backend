@@ -1,149 +1,170 @@
-﻿<?php
+<?php
+
 namespace App\Filament\Pages;
 
+use Carbon\Carbon;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Filament\Actions\Action;
-use Filament\Notifications\Notification;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class SystemBackups extends Page
 {
     protected string $view = 'filament.pages.system-backups';
-    public static function getNavigationIcon(): string { return 'heroicon-o-circle-stack'; }
-    public static function getNavigationGroup(): ?string { return __('System Settings'); }
-    public static function getNavigationLabel(): string { return __('System Backups'); }
-    public function getTitle(): string { return __('System Backups'); }
+
     public array $backupFiles = [];
 
-    public function mount()
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-circle-stack';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System Settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('System Backups');
+    }
+
+    public function getTitle(): string
+    {
+        return __('System Backups');
+    }
+
+    public function mount(): void
     {
         $this->loadBackupFiles();
     }
 
-    public function loadBackupFiles()
+    public function loadBackupFiles(): void
     {
         $directory = storage_path('app/private/backups');
 
-        if (!File::exists($directory)) {
+        if (! File::exists($directory)) {
             File::makeDirectory($directory, 0755, true, true);
         }
 
-        $files = File::files($directory);
-
-        $this->backupFiles = collect($files)->map(function ($file) {
-            return [
+        $this->backupFiles = collect(File::files($directory))
+            ->map(fn ($file): array => [
                 'name' => $file->getFilename(),
-                'size' => round($file->getSize() / 1024 / 1024, 2) . ' MB',
+                'size' => round($file->getSize() / 1024 / 1024, 2).' '.__('Megabytes'),
                 'created_at' => Carbon::createFromTimestamp($file->getMTime())->format('Y-m-d H:i:s'),
-                'path' => $file->getRealPath(),
-            ];
-        })->sortByDesc('created_at')->toArray();
+            ])
+            ->sortByDesc('created_at')
+            ->values()
+            ->all();
     }
 
-    public function generateBackup()
+    public function generateBackup(): void
     {
         try {
-            $dbName = env('DB_DATABASE');
-            $tables = [];
-            $result = DB::select('SHOW TABLES');
-            $key = "Tables_in_" . $dbName;
+            $database = (string) config('database.connections.mysql.database');
+            $tablesKey = 'Tables_in_'.$database;
+            $tables = collect(DB::select('SHOW TABLES'))->pluck($tablesKey);
+            $fileName = 'saas_backup_'.now()->format('Y_m_d_His').'.sql';
+            $filePath = storage_path('app/private/backups/'.$fileName);
 
-            foreach ($result as $row) {
-                $tables[] = $row->$key;
-            }
-
-            $sql = "-- Hasbni Full SaaS Backup\n";
-            $sql .= "-- Generated: " . now()->format('Y-m-d H:i:s') . "\n";
-            $sql .= "-- Database: {$dbName}\n";
-            $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+            File::put($filePath, implode("\n", [
+                '-- Universal SaaS database backup',
+                '-- Generated: '.now()->format('Y-m-d H:i:s'),
+                "-- Database: {$database}",
+                'SET FOREIGN_KEY_CHECKS=0;',
+                '',
+            ]));
 
             foreach ($tables as $table) {
-                if (in_array($table, ['cache', 'cache_locks', 'sessions', 'jobs', 'failed_jobs'])) {
+                if (in_array($table, ['cache', 'cache_locks', 'sessions', 'jobs', 'failed_jobs'], true)) {
                     continue;
                 }
 
                 $createTable = DB::select("SHOW CREATE TABLE `{$table}`");
-                $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
-                $sql .= $createTable[0]->{'Create Table'} . ";\n\n";
+                File::append($filePath, "DROP TABLE IF EXISTS `{$table}`;\n".$createTable[0]->{'Create Table'}.";\n\n");
 
-                // ðŸš€ FIX: Chunk data by 1000 rows to prevent RAM crashing out
-                DB::table($table)->orderBy('id')->chunk(1000, function ($rows) use (&$sql, $table) {
+                $columns = Schema::getColumnListing($table);
+                $orderColumn = in_array('id', $columns, true) ? 'id' : $columns[0];
+
+                DB::table($table)->orderBy($orderColumn)->chunk(1000, function ($rows) use ($filePath, $table): void {
+                    $buffer = '';
+
                     foreach ($rows as $row) {
-                        $rowArray = (array) $row;
-                        $keys = array_keys($rowArray);
-                        $values = array_values($rowArray);
+                        $rowData = (array) $row;
+                        $columns = array_keys($rowData);
+                        $values = array_map(
+                            fn (mixed $value): string => $value === null
+                                ? 'NULL'
+                                : "'".str_replace("'", "''", (string) $value)."'",
+                            array_values($rowData),
+                        );
 
-                        $escapedValues = array_map(function($val) {
-                            if ($val === null) return 'NULL';
-                            return "'" . str_replace("'", "''", $val) . "'";
-                        }, $values);
-
-                        $sql .= "INSERT INTO `{$table}` (`" . implode("`, `", $keys) . "`) VALUES (" . implode(", ", $escapedValues) . ");\n";
+                        $buffer .= "INSERT INTO `{$table}` (`".implode('`, `', $columns).'`) VALUES ('.implode(', ', $values).");\n";
                     }
+
+                    File::append($filePath, $buffer);
                 });
-                $sql .= "\n\n";
+
+                File::append($filePath, "\n");
             }
 
-            $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
-
-            $fileName = 'full_backup_' . now()->format('Y_m_d_His') . '.sql';
-            $filePath = storage_path('app/private/backups/' . $fileName);
-            File::put($filePath, $sql);
-
+            File::append($filePath, "SET FOREIGN_KEY_CHECKS=1;\n");
             $this->loadBackupFiles();
 
             Notification::make()
-                ->title('Backup Generated!')
-                ->body("ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù†Ø³Ø®Ø© Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·ÙŠØ© Ø¨Ù†Ø¬Ø§Ø­ Ø¨Ø§Ø³Ù…: {$fileName}")
+                ->title(__('Backup Generated'))
+                ->body(__('Backup created successfully: :file', ['file' => $fileName]))
                 ->success()
                 ->send();
-
-        } catch (\Exception $e) {
+        } catch (Throwable $exception) {
             Notification::make()
-                ->title('Backup Failed')
-                ->body($e->getMessage())
+                ->title(__('Backup Failed'))
+                ->body($exception->getMessage())
                 ->danger()
                 ->send();
         }
     }
 
-    public function downloadBackup($name)
+    public function downloadBackup(string $name): mixed
     {
-        $safeName = basename((string) $name);
-        if ($safeName !== $name || !str_ends_with($safeName, '.sql')) {
-            Notification::make()->title('Invalid backup file.')->danger()->send();
+        $safeName = basename($name);
+
+        if ($safeName !== $name || ! str_ends_with($safeName, '.sql')) {
+            Notification::make()->title(__('Invalid Backup File'))->danger()->send();
+
             return null;
         }
 
-        $filePath = storage_path('app/private/backups/' . $safeName);
+        $filePath = storage_path('app/private/backups/'.$safeName);
 
         if (File::exists($filePath)) {
             return response()->download($filePath, $safeName);
         }
 
-        Notification::make()->title('File not found!')->danger()->send();
+        Notification::make()->title(__('File Not Found'))->danger()->send();
+
+        return null;
     }
 
-    public function deleteBackup($name)
+    public function deleteBackup(string $name): void
     {
-        $safeName = basename((string) $name);
-        if ($safeName !== $name || !str_ends_with($safeName, '.sql')) {
-            Notification::make()->title('Invalid backup file.')->danger()->send();
+        $safeName = basename($name);
+
+        if ($safeName !== $name || ! str_ends_with($safeName, '.sql')) {
+            Notification::make()->title(__('Invalid Backup File'))->danger()->send();
+
             return;
         }
 
-        $filePath = storage_path('app/private/backups/' . $safeName);
+        $filePath = storage_path('app/private/backups/'.$safeName);
 
         if (File::exists($filePath)) {
             File::delete($filePath);
             $this->loadBackupFiles();
 
-            Notification::make()
-                ->title('Backup File Deleted!')
-                ->success()
-                ->send();
+            Notification::make()->title(__('Backup File Deleted'))->success()->send();
         }
     }
 }

@@ -1,8 +1,9 @@
 <?php
 
+use App\Models\Payment;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/get-cert', function () {
     abort_unless(auth()->check() && auth()->user()->role === 'super_admin', 403);
@@ -53,3 +54,11 @@ Route::get('switch-language/{locale}', function (string $locale) {
 
     return redirect()->back();
 })->name('switch-language');
+
+Route::get('/payments/{payment}/receipt', function (Payment $payment) {
+    $payment->load(['user', 'subscription.plan']);
+
+    return view('receipt', compact('payment'));
+})
+    ->middleware(['auth', 'manager'])
+    ->name('payment.receipt');

@@ -1,7 +1,7 @@
 <x-filament-panels::page>
     <x-filament::section
-        heading="Global Settings"
-        description="Manage application availability, update links, support contact, and Firebase credentials."
+        :heading="__('Global Settings')"
+        :description="__('Manage application availability, updates, support contact, and notification credentials.')"
         icon="heroicon-o-cog-8-tooth"
     >
         <form wire:submit="saveSettings" class="space-y-6">
@@ -9,7 +9,7 @@
 
             <div class="flex justify-end">
                 <x-filament::button type="submit" color="primary" icon="heroicon-o-check-circle">
-                    Save Settings
+                    {{ __('Save Settings') }}
                 </x-filament::button>
             </div>
         </form>

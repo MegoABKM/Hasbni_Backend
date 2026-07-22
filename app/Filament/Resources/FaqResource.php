@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\FaqResource\Pages\ManageFaqs;
 use App\Models\Faq;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -29,6 +30,16 @@ class FaqResource extends Resource
     }
 
     public static function getNavigationLabel(): string
+    {
+        return __('FAQs');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('FAQ');
+    }
+
+    public static function getPluralModelLabel(): string
     {
         return __('FAQs');
     }
@@ -61,7 +72,7 @@ class FaqResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\FaqResource\Pages\ManageFaqs::route('/'),
+            'index' => ManageFaqs::route('/'),
         ];
     }
 }

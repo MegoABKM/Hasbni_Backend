@@ -1,21 +1,24 @@
 <?php
+
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class TokensRelationManager extends RelationManager
 {
-    // العلاقة الافتراضية الخاصة بـ Laravel Sanctum
     protected static string $relationship = 'tokens';
+
     protected static ?string $recordTitleAttribute = 'name';
-    protected static ?string $title = 'Active Devices & Sessions';
-    
-    // 🚀 الإصلاح هنا: تم تعديل نوع البيانات ليتطابق تماماً مع نظام PHP 8.3 و Filament v3
-    protected static string|\BackedEnum|null $icon = 'heroicon-o-device-phone-mobile';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('Active Devices and Sessions');
+    }
 
     public function table(Table $table): Table
     {
@@ -23,43 +26,33 @@ class TokensRelationManager extends RelationManager
             ->defaultSort('last_used_at', 'desc')
             ->columns([
                 TextColumn::make('name')
-                    ->label('Device Name')
+                    ->label(__('Device Name'))
                     ->searchable()
                     ->sortable()
-                    ->wrap()
-                    ->limit(36)
                     ->badge()
                     ->color('primary')
                     ->icon('heroicon-o-computer-desktop'),
-
                 TextColumn::make('created_at')
-                    ->label('Login Time')
+                    ->label(__('Login Time'))
                     ->dateTime()
                     ->sortable(),
-
                 TextColumn::make('last_used_at')
-                    ->label('Last Activity')
+                    ->label(__('Last Activity'))
                     ->dateTime()
                     ->sortable()
-                    ->wrap()
-                    ->placeholder('Never used'),
+                    ->placeholder(__('Never Used')),
             ])
-            ->filters([
-                //
-            ])
-            ->headerActions([])
-            ->actions([
-                // زر إلغاء صلاحية الجهاز
+            ->recordActions([
                 DeleteAction::make()
-                    ->label('Revoke Access')
+                    ->label(__('Revoke Access'))
                     ->icon('heroicon-o-power')
-                    ->modalHeading('Revoke Device Access')
-                    ->modalDescription('Are you sure you want to log this device out? The user will have to login again.')
-                    ->successNotificationTitle('Device access revoked successfully.'),
+                    ->modalHeading(__('Revoke Device Access'))
+                    ->modalDescription(__('The tenant will need to sign in again on this device.'))
+                    ->successNotificationTitle(__('Device access revoked successfully.')),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 DeleteBulkAction::make()
-                    ->label('Revoke Selected')
+                    ->label(__('Revoke Selected'))
                     ->icon('heroicon-o-power'),
             ]);
     }

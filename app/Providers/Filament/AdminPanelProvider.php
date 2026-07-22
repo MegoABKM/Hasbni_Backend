@@ -1,18 +1,12 @@
-﻿<?php
+<?php
 
 namespace App\Providers\Filament;
 
-use App\Filament\Widgets\SystemOverviewWidget;
-use App\Filament\Widgets\SaaSMetricsWidget;
-use App\Filament\Widgets\PlanStatsWidget;
-use App\Filament\Widgets\RevenueChart;
-use App\Filament\Widgets\ExecutiveKpiWidget;
-use App\Filament\Widgets\ExecutiveRevenueTrendChart;
 use App\Filament\Widgets\ExecutiveDecisionSupportWidget;
-use App\Filament\Widgets\GlobalTenantActivityWidget;
 use App\Filament\Widgets\Kpi\KpiHomeMrrTrendChart;
 use App\Filament\Widgets\Kpi\KpiHomeOverviewWidget;
-
+use App\Filament\Widgets\SaaSCountryAnalyticsWidget;
+use App\Filament\Widgets\SystemOverviewWidget;
 use App\Http\Middleware\SetLocale;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -42,8 +36,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('hasbni-super-secure-panel-99')
             ->login()
-            ->font('Cairo') // ðŸš€ Fixes Arabic typography and RTL alignment issues
-            ->maxContentWidth('full') // ðŸš€ Fixed: Used string 'full' instead of the Enum to prevent the 500 Server Error
+            ->font('Cairo')
+            ->maxContentWidth('full')
             ->colors([
                 'primary' => Color::Teal,
             ])
@@ -64,14 +58,9 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
                 KpiHomeOverviewWidget::class,
                 KpiHomeMrrTrendChart::class,
-                ExecutiveKpiWidget::class,
                 ExecutiveDecisionSupportWidget::class,
-                ExecutiveRevenueTrendChart::class,
+                SaaSCountryAnalyticsWidget::class,
                 SystemOverviewWidget::class,
-                SaaSMetricsWidget::class,
-                PlanStatsWidget::class,
-                RevenueChart::class,
-                GlobalTenantActivityWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -90,12 +79,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
-                fn (): string => Blade::render('@include("filament.language-switch")')
+                fn (): string => Blade::render('@include("filament.language-switch")'),
             )
-            // ðŸš€ Injects your app's Tailwind v4 CSS so all custom Blade views are styled perfectly
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('@vite("resources/css/app.css")')
+                fn (): string => Blade::render('@vite("resources/css/app.css")'),
             );
     }
 }

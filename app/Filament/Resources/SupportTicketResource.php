@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\SupportTicketResource\Pages\ManageSupportTickets;
+use App\Mail\SupportTicketRepliedMail;
 use App\Models\SupportTicket;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Mail;
 
 class SupportTicketResource extends Resource
 {
@@ -32,6 +35,16 @@ class SupportTicketResource extends Resource
         return __('Support Tickets');
     }
 
+    public static function getModelLabel(): string
+    {
+        return __('Support Ticket');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Support Tickets');
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -42,7 +55,7 @@ class SupportTicketResource extends Resource
         return $schema->components([
             Select::make('user_id')
                 ->relationship('user', 'name')
-                ->label(__('Customer'))
+                ->label(__('Tenant'))
                 ->disabled(),
 
             TextInput::make('subject')
@@ -75,7 +88,7 @@ class SupportTicketResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('user.name')->label(__('Customer'))->searchable(),
+                TextColumn::make('user.name')->label(__('Tenant'))->searchable(),
                 TextColumn::make('subject')->label(__('Subject'))->limit(30)->searchable(),
                 TextColumn::make('status')
                     ->label(__('Status'))
@@ -104,6 +117,18 @@ class SupportTicketResource extends Resource
                         }
 
                         return $data;
+                    })
+                    ->after(function (SupportTicket $record): void {
+                        if (! $record->wasChanged('admin_reply') || blank($record->admin_reply)) {
+                            return;
+                        }
+
+                        $record->loadMissing('user');
+
+                        if (filled($record->user?->email)) {
+                            Mail::to($record->user->email)
+                                ->queue(new SupportTicketRepliedMail($record));
+                        }
                     }),
             ]);
     }
@@ -111,7 +136,7 @@ class SupportTicketResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => \App\Filament\Resources\SupportTicketResource\Pages\ManageSupportTickets::route('/'),
+            'index' => ManageSupportTickets::route('/'),
         ];
     }
 }

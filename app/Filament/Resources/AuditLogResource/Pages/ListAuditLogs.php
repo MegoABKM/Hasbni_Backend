@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Filament\Resources\AuditLogResource\Pages;
 
 use App\Filament\Resources\AuditLogResource;
@@ -10,7 +11,6 @@ class ListAuditLogs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        // لا يوجد أزرار هنا لأننا لا نريد من المدير إنشاء سجل يدوياً
         return [];
     }
 }

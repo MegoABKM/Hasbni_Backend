@@ -2,199 +2,242 @@
 
 namespace App\Filament\Resources;
 
-use Illuminate\Support\Facades\DB;
-use App\Models\AuditLog;
-use App\Models\User;
 use App\Filament\Resources\UserResource\Pages;
-use App\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
-use App\Filament\Resources\UserResource\RelationManagers\ProductsRelationManager; 
-use App\Filament\Resources\UserResource\RelationManagers\SalesRelationManager; 
-use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager; 
-use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager; 
-
+use App\Filament\Resources\UserResource\RelationManagers\ProfileRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager;
+use App\Models\User;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Hash;
-use Carbon\Carbon;
-use Filament\Actions\EditAction;
-use Filament\Actions\Action; 
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    public static function getNavigationIcon(): string { return 'heroicon-o-users'; }
-    public static function getNavigationGroup(): ?string { return __('SaaS Management'); }
-    public static function getNavigationLabel(): string { return __('Users & Tenants'); }
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-building-office-2';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('SaaS Management');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Tenants');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Tenant');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Tenants');
+    }
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->withCount(['sales', 'products', 'cashTransactions']);
+        return parent::getEloquentQuery()
+            ->where('role', 'tenant')
+            ->with('subscription.plan')
+            ->withCount(['subscriptions', 'payments'])
+            ->withSum([
+                'payments as successful_payments_sum' => fn (Builder $query): Builder => $query->where('status', 'successful'),
+            ], 'amount');
     }
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('name')->label(__('Name'))->required(),
-            TextInput::make('email')->label(__('Email'))->email()->required(),
-            TextInput::make('phone')->label(__('Phone Number')),
-            TextInput::make('country')->label(__('Country')),
-            TextInput::make('business_type')->label(__('Business Type')),
-
-            TextInput::make('password')
-                ->label(__('Password'))
-                ->password()
-                ->dehydrateStateUsing(fn ($state) => Hash::make($state))
-                ->dehydrated(fn ($state) => filled($state))
-                ->required(fn (string $context): bool => $context === 'create'),
-            Select::make('role')
-                ->label(__('Role'))
-                ->options(['shop_owner' => __('Shop Owner'), 'super_admin' => __('Super Admin')])->required(),
-            Toggle::make('is_banned')->label(__('Ban User'))->onColor('danger')->offColor('success'),
+        return $schema->components([
+            Section::make(__('Tenant Profile'))
+                ->schema([
+                    Grid::make([
+                        'default' => 1,
+                        'md' => 2,
+                    ])->schema([
+                        TextInput::make('name')
+                            ->label(__('Name'))
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('email')
+                            ->label(__('Email'))
+                            ->email()
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->maxLength(255),
+                        TextInput::make('phone')
+                            ->label(__('Phone Number'))
+                            ->tel()
+                            ->maxLength(50),
+                        TextInput::make('country')
+                            ->label(__('Country'))
+                            ->maxLength(100),
+                        TextInput::make('business_type')
+                            ->label(__('Industry'))
+                            ->maxLength(100),
+                        TextInput::make('password')
+                            ->label(__('Password'))
+                            ->password()
+                            ->revealable()
+                            ->dehydrateStateUsing(fn (string $state): string => Hash::make($state))
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->required(fn (string $operation): bool => $operation === 'create'),
+                    ]),
+                    Toggle::make('is_banned')
+                        ->label(__('Suspend Tenant'))
+                        ->onColor('danger')
+                        ->offColor('success'),
+                    Hidden::make('role')->default('tenant'),
+                ]),
         ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('updated_at', 'desc')
+            ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('name')->label(__('Name'))->searchable()->sortable(),
-                TextColumn::make('email')->label(__('Email'))->searchable()->sortable(),
-                TextColumn::make('role')->label(__('Role'))->badge()->sortable(),
-                IconColumn::make('is_banned')->label(__('Banned'))->boolean()->sortable(),
-                    
-                TextColumn::make('country')->label(__('Country'))->searchable()->sortable()->badge()->color('info'),
-                TextColumn::make('business_type')->label(__('Industry'))->searchable()->toggleable(),
-                    
-                TextColumn::make('data_weight')
-                    ->label(__('DB Weight (Records)'))
-                    ->getStateUsing(fn (User $record) => 
-                        ($record->sales_count ?? 0) + 
-                        ($record->products_count ?? 0) + 
-                        ($record->cash_transactions_count ?? 0)
-                    )
-                    ->sortable(query: function (Builder $query, string $direction) {
-                        return $query->orderByRaw('(COALESCE(sales_count, 0) + COALESCE(products_count, 0) + COALESCE(cash_transactions_count, 0)) ' . $direction);
-                    })
+                TextColumn::make('name')
+                    ->label(__('Name'))
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('email')
+                    ->label(__('Email'))
+                    ->searchable()
+                    ->sortable()
+                    ->copyable(),
+                TextColumn::make('country')
+                    ->label(__('Country'))
+                    ->searchable()
+                    ->sortable()
                     ->badge()
-                    ->color(fn ($state) => $state > 5000 ? 'danger' : ($state > 1000 ? 'warning' : 'gray')),
-
-                TextColumn::make('updated_at')->label(__('Last Sync'))->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
-                
+                    ->placeholder(__('Unspecified')),
                 TextColumn::make('subscription.plan.name')
                     ->label(__('Current Plan'))
-                    ->getStateUsing(function (User $record) {
-                        $sub = $record->subscription;
-                        if (!$sub || $sub->status === 'expired' || ($sub->ends_at && Carbon::parse($sub->ends_at)->isPast())) {
-                            return 'Free';
-                        }
-                        return $sub->plan->name ?? 'Free';
-                    })
+                    ->getStateUsing(fn (User $record): string => $record->subscription?->plan?->name ?? __('Free'))
                     ->badge()
-                    ->color(fn (string $state): string => $state === 'Free' ? 'gray' : 'success')
+                    ->color(fn (string $state): string => $state === __('Free') ? 'gray' : 'success'),
+                TextColumn::make('subscriptions_count')
+                    ->label(__('Subscriptions'))
+                    ->numeric()
                     ->sortable(),
+                TextColumn::make('successful_payments_sum')
+                    ->label(__('Total Revenue'))
+                    ->money('USD')
+                    ->sortable(),
+                IconColumn::make('is_banned')
+                    ->label(__('Suspended'))
+                    ->boolean()
+                    ->sortable(),
+                TextColumn::make('created_at')
+                    ->label(__('Registered At'))
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(),
+                TextColumn::make('updated_at')
+                    ->label(__('Last Activity'))
+                    ->since()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('country')
-                    ->options(fn () => User::pluck('country', 'country')->filter()->unique()->toArray())
-                    ->label(__('Filter by Country')),
-
-                SelectFilter::make('business_type')
-                    ->options(fn () => User::pluck('business_type', 'business_type')->filter()->unique()->toArray())
-                    ->label(__('Filter by Industry')),
+                    ->label(__('Country'))
+                    ->options(fn (): array => User::query()
+                        ->where('role', 'tenant')
+                        ->whereNotNull('country')
+                        ->where('country', '!=', '')
+                        ->distinct()
+                        ->orderBy('country')
+                        ->pluck('country', 'country')
+                        ->all()),
+                SelectFilter::make('is_banned')
+                    ->label(__('Account Status'))
+                    ->options([
+                        '0' => __('Active'),
+                        '1' => __('Suspended'),
+                    ]),
             ])
             ->recordActions([
                 Action::make('view_tenant_data')
-                    ->label(__('Tenant Data'))
+                    ->label(__('Tenant Details'))
                     ->icon('heroicon-o-presentation-chart-line')
                     ->color('info')
                     ->url(fn (User $record): string => static::getUrl('tenant-data', ['record' => $record])),
-
                 EditAction::make(),
-                
                 Action::make('revoke_sessions')
-                    ->label(__('Force Logout'))
+                    ->label(__('Revoke All Sessions'))
                     ->icon('heroicon-o-power')
                     ->color('danger')
                     ->requiresConfirmation()
-                    ->modalHeading(__('Force Logout User'))
-                    ->modalDescription(__('Delete all access tokens? They will be logged out from all devices immediately.'))
-                    ->action(fn (User $record) => $record->tokens()->delete()),
-
-                Action::make('wipe_data')
-                    ->label(__('Soft Reset'))
-                    ->icon('heroicon-o-trash')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading(__('Wipe Operational Data?'))
-                    ->modalDescription(__('⚠️ Warning: This will permanently delete ALL Sales, Products, Expenses, Customers, and Cash records for this user. Their Subscription, Payments, and Profile will remain intact. This action CANNOT be undone.'))
-                    ->modalSubmitActionLabel(__('Yes, Wipe Everything'))
-                    ->action(function (User $record) {
-                        DB::transaction(function () use ($record) {
-                            $record->sales()->delete();
-                            $record->products()->delete();
-                            $record->expenses()->delete();
-                            $record->withdrawals()->delete();
-                            $record->customers()->delete();
-                            $record->suppliers()->delete();
-                            $record->partners()->delete();
-                            $record->partnershipRecords()->delete();
-                            $record->cashTransactions()->delete();
-                            $record->cashDrawers()->delete();
-                            $record->employees()->delete();
-                            $record->productCategories()->delete();
-                            $record->expenseCategories()->delete();
-                            $record->inventoryMovements()->delete();
-
-                            AuditLog::create([
-                                'user_id' => auth()->id(), 
-                                'event' => 'tenant_wiped',
-                                'auditable_type' => User::class,
-                                'auditable_id' => $record->id,
-                                'new_values' => json_encode(['action' => 'Admin executed a Soft Reset (Wipe Data).']),
-                                'ip_address' => request()->ip(),
-                                'user_agent' => request()->userAgent(),
-                            ]);
-                        });
+                    ->modalHeading(__('Revoke All Sessions'))
+                    ->modalDescription(__('The tenant will be signed out from every device immediately.'))
+                    ->action(function (User $record): void {
+                        $record->tokens()->delete();
 
                         Notification::make()
-                            ->title(__('Tenant operational data wiped successfully.'))
+                            ->title(__('All sessions were revoked successfully.'))
                             ->success()
                             ->send();
                     }),
+                static::impersonationAction(),
+            ]);
+    }
 
-                Action::make('export_sql')
-                    ->label(__('Export SQL'))
-                    ->icon('heroicon-o-circle-stack')
-                    ->color('warning')
-                    ->action(function (User $record) {
-                        // الكود الداخلي للـ SQL كما هو
-                        $sql = "-- Backup Script for {$record->name}\n";
-                        $fileName = 'backup_' . preg_replace('/[^a-zA-Z0-9]/', '_', $record->name) . '.sql';
-                        return response()->streamDownload(fn () => print($sql), $fileName, ['Content-Type' => 'application/sql']);
-                    }),
-            ]); 
+    public static function impersonationAction(): Action
+    {
+        return Action::make('impersonate_api_token')
+            ->label(__('Impersonate (API Token)'))
+            ->icon('heroicon-o-key')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->modalHeading(__('Generate Impersonation Token'))
+            ->modalDescription(__('This creates a temporary API token that acts as this tenant.'))
+            ->modalSubmitActionLabel(__('Generate Token'))
+            ->visible(fn (User $record): bool => $record->role === 'tenant')
+            ->action(function (User $record): void {
+                $record->tokens()
+                    ->where('name', 'admin_impersonation')
+                    ->delete();
+
+                $token = $record->createToken('admin_impersonation')->plainTextToken;
+
+                Notification::make()
+                    ->title(__('Impersonation token created'))
+                    ->body(__('Copy this token and store it securely:')."\n\n{$token}")
+                    ->warning()
+                    ->persistent()
+                    ->send();
+            });
     }
 
     public static function getRelations(): array
     {
         return [
+            ProfileRelationManager::class,
             SubscriptionsRelationManager::class,
             PaymentsRelationManager::class,
-            TokensRelationManager::class, 
-            ProductsRelationManager::class, 
-            SalesRelationManager::class,    
+            TokensRelationManager::class,
             AuditLogsRelationManager::class,
         ];
     }

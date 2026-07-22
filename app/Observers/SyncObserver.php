@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Observers;
 
@@ -7,26 +7,27 @@ use Illuminate\Database\Eloquent\Model;
 
 class SyncObserver
 {
-    public function saved(Model $model)
+    public function saved(Model $model): void
     {
         $this->triggerSilentSync($model);
     }
 
-    public function deleted(Model $model)
+    public function deleted(Model $model): void
     {
         $this->triggerSilentSync($model);
     }
 
-    private function triggerSilentSync(Model $model)
+    private function triggerSilentSync(Model $model): void
     {
         $userId = $model->user_id ?? $model->getAttribute('user_id');
-        if (!$userId) return;
+
+        if (! $userId) {
+            return;
+        }
 
         $senderDeviceId = request()->header('X-Device-ID');
 
-        // ðŸš€ FIX: afterResponse ensures the API returns to the phone instantly
-        // without waiting for Firebase to reply, keeping the App lightning fast.
-        dispatch(function () use ($userId, $senderDeviceId) {
+        dispatch(function () use ($userId, $senderDeviceId): void {
             app(FcmService::class)->sendSilentUpdate($userId, $senderDeviceId);
         })->afterResponse();
     }

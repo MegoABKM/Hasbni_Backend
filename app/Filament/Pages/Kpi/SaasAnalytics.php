@@ -10,5 +10,5 @@ class SaasAnalytics extends BaseKpiPage
 
     protected static string $navigationLabelKey = 'kpi.nav.saas';
 
-    protected static int $navigationOrder = 9;
+    protected static int $navigationOrder = 1;
 }

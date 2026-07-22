@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets\Kpi;
 
-use App\Filament\Pages\Kpi\Overview;
+use App\Filament\Pages\Kpi\SaasAnalytics;
 use App\Services\KpiService;
 use Filament\Widgets\Widget;
 
@@ -23,7 +23,7 @@ class KpiHomeOverviewWidget extends Widget
     {
         return [
             'metrics' => app(KpiService::class)->homeMetrics(),
-            'overviewUrl' => Overview::getUrl(),
+            'overviewUrl' => SaasAnalytics::getUrl(),
         ];
     }
 }

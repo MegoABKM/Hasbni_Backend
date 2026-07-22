@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -10,17 +11,22 @@ class EnsureManagerAccess
     public function handle(Request $request, Closure $next)
     {
         $user = $request->user();
+
+        if ($user?->role === 'super_admin') {
+            return $next($request);
+        }
+
         $profile = $user->profile;
 
         // إذا لم يتم تعيين باسورد للمدير، نسمح بالمرور
-        if (!$profile || !$profile->manager_password) {
+        if (! $profile || ! $profile->manager_password) {
             return response()->json(['message' => 'manager_password_required'], 403);
         }
 
         $headerPin = $request->header('X-Manager-Password');
-        
+
         // التحقق من أن الباسورد المُرسل يطابق باسورد المدير
-        if (!$headerPin || !Hash::check($headerPin, $profile->manager_password)) {
+        if (! $headerPin || ! Hash::check($headerPin, $profile->manager_password)) {
             return response()->json(['message' => 'عذراً، هذا الإجراء يتطلب صلاحيات المدير.'], 403);
         }
 

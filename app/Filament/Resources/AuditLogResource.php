@@ -1,38 +1,56 @@
 <?php
+
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\AuditLogResource\Pages;
 use App\Models\AuditLog;
-use Filament\Schemas\Schema; // 🚀 استخدام نسختك الحديثة
-use Filament\Resources\Resource;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
-use Filament\Actions\ViewAction; // 🚀 الأكشن الموحد
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Illuminate\Database\Eloquent\Builder;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class AuditLogResource extends Resource
 {
     protected static ?string $model = AuditLog::class;
 
-   public static function getNavigationIcon(): string { return 'heroicon-o-shield-check'; }
-    public static function getNavigationGroup(): ?string { return __('System Settings'); }
-    public static function getNavigationLabel(): string { return __('Audit Logs'); }
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-shield-check';
+    }
 
-    // 🔒 منع الإضافة (السجلات تُنشأ برمجياً فقط)
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System Settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Audit Logs');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Audit Log');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Audit Logs');
+    }
+
     public static function canCreate(): bool
     {
         return false;
     }
 
-    // 🔒 منع التعديل
     public static function canEdit($record): bool
     {
         return false;
     }
 
-    // 🔒 منع الحذف اليدوي (لأنك فعلت Prunable ليحذف القديم تلقائياً)
     public static function canDelete($record): bool
     {
         return false;
@@ -40,26 +58,14 @@ class AuditLogResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('user.name')->label('User')->disabled(),
-            TextInput::make('event')->label('Action')->disabled(),
-            TextInput::make('auditable_type')->label('Model')->disabled(),
-            TextInput::make('ip_address')->label('IP Address')->disabled(),
-            
-            Textarea::make('old_values')
-                ->label('Old Values (JSON)')
-                ->disabled()
-                ->columnSpanFull(),
-                
-            Textarea::make('new_values')
-                ->label('New Values (JSON)')
-                ->disabled()
-                ->columnSpanFull(),
-                
-            Textarea::make('user_agent')
-                ->label('Device Info')
-                ->disabled()
-                ->columnSpanFull(),
+        return $schema->components([
+            TextInput::make('user.name')->label(__('User'))->disabled(),
+            TextInput::make('event')->label(__('Action'))->disabled(),
+            TextInput::make('auditable_type')->label(__('Target Model'))->disabled(),
+            TextInput::make('ip_address')->label(__('IP Address'))->disabled(),
+            Textarea::make('old_values')->label(__('Old Values'))->disabled()->columnSpanFull(),
+            Textarea::make('new_values')->label(__('New Values'))->disabled()->columnSpanFull(),
+            Textarea::make('user_agent')->label(__('Device Information'))->disabled()->columnSpanFull(),
         ]);
     }
 
@@ -68,51 +74,37 @@ class AuditLogResource extends Resource
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime()
-                    ->sortable(),
-                    
-                TextColumn::make('user.name')
-                    ->label('User')
-                    ->searchable()
-                    ->sortable(),
-                    
+                TextColumn::make('created_at')->label(__('Date'))->dateTime()->sortable(),
+                TextColumn::make('user.name')->label(__('User'))->searchable()->sortable(),
                 TextColumn::make('event')
-                    ->label('Action')
+                    ->label(__('Action'))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'created' => 'success',
                         'updated' => 'warning',
                         'deleted' => 'danger',
-                        'login'   => 'info',
-                        'logout'  => 'gray',
-                        default   => 'primary',
+                        'login' => 'info',
+                        'logout' => 'gray',
+                        default => 'primary',
                     })
                     ->searchable(),
-                    
                 TextColumn::make('auditable_type')
-                    ->label('Target Model')
-                    ->formatStateUsing(fn (string $state) => class_basename($state))
+                    ->label(__('Target Model'))
+                    ->formatStateUsing(fn (string $state): string => class_basename($state))
                     ->searchable(),
-                    
                 TextColumn::make('ip_address')
-                    ->label('IP Address')
+                    ->label(__('IP Address'))
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                ViewAction::make(), // 👁️ زر العرض فقط
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            // نحتاج صفحة Index فقط لأننا منعنا الإنشاء والتعديل
             'index' => Pages\ListAuditLogs::route('/'),
         ];
     }

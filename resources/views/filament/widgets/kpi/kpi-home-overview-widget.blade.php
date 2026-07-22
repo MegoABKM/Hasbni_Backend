@@ -4,10 +4,10 @@
         :description="__('kpi.home.description')"
         icon="heroicon-o-presentation-chart-line"
     >
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             @foreach ($metrics as $metric)
                 <div
-                    class="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10"
+                    class="min-w-0 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-300 hover:shadow-md dark:bg-gray-900 dark:ring-white/10"
                     title="{{ __($metric['tooltip_key']) }}"
                 >
                     <div class="flex items-start justify-between gap-3">

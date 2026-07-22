@@ -1,28 +1,51 @@
 <?php
+
 namespace App\Filament\Resources;
 
-use App\Models\AppConfig;
 use App\Filament\Resources\AppConfigResource\Pages;
-use Filament\Schemas\Schema;
+use App\Models\AppConfig;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 
 class AppConfigResource extends Resource
 {
     protected static ?string $model = AppConfig::class;
 
-    public static function getNavigationIcon(): string { return 'heroicon-o-cog-6-tooth'; }
-    public static function getNavigationGroup(): ?string { return 'System Settings'; }
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-cog-6-tooth';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('System Settings');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('Application Configuration');
+    }
+
+    public static function getModelLabel(): string
+    {
+        return __('Configuration');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('Configurations');
+    }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('key')->required(),
-            TextInput::make('value')->required(),
+            TextInput::make('key')->label(__('Key'))->required(),
+            TextInput::make('value')->label(__('Value'))->required(),
         ]);
     }
 
@@ -30,8 +53,8 @@ class AppConfigResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('key')->searchable(),
-                TextColumn::make('value'),
+                TextColumn::make('key')->label(__('Key'))->searchable(),
+                TextColumn::make('value')->label(__('Value')),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -39,7 +62,10 @@ class AppConfigResource extends Resource
             ]);
     }
 
-    public static function getPages(): array {
-        return ['index' => Pages\ManageAppConfigs::route('/')];
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ManageAppConfigs::route('/'),
+        ];
     }
 }

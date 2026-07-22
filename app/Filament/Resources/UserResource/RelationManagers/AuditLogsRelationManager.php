@@ -1,30 +1,36 @@
 <?php
+
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
-use Filament\Schemas\Schema;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Actions\ViewAction; // 🚀 الأكشنز الموحدة لنسختك
+use Illuminate\Database\Eloquent\Model;
 
 class AuditLogsRelationManager extends RelationManager
 {
-    // 🚀 ربطها بالعلاقة التي أضفناها في موديل User
     protected static string $relationship = 'auditLogs';
+
     protected static ?string $recordTitleAttribute = 'event';
-    protected static ?string $title = 'User Activity & Audit Trail';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('Audit Logs');
+    }
 
     public function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('event')->label('Action')->disabled(),
-            TextInput::make('auditable_type')->label('Target Model')->disabled(),
-            TextInput::make('ip_address')->label('IP Address')->disabled(),
-            Textarea::make('old_values')->label('Old Values (JSON)')->disabled()->columnSpanFull(),
-            Textarea::make('new_values')->label('New Values (JSON)')->disabled()->columnSpanFull(),
-            Textarea::make('user_agent')->label('Device Info')->disabled()->columnSpanFull(),
+        return $schema->components([
+            TextInput::make('event')->label(__('Action'))->disabled(),
+            TextInput::make('auditable_type')->label(__('Target Model'))->disabled(),
+            TextInput::make('ip_address')->label(__('IP Address'))->disabled(),
+            Textarea::make('old_values')->label(__('Old Values'))->disabled()->columnSpanFull(),
+            Textarea::make('new_values')->label(__('New Values'))->disabled()->columnSpanFull(),
+            Textarea::make('user_agent')->label(__('Device Information'))->disabled()->columnSpanFull(),
         ]);
     }
 
@@ -33,38 +39,26 @@ class AuditLogsRelationManager extends RelationManager
         return $table
             ->defaultSort('created_at', 'desc')
             ->columns([
-                TextColumn::make('created_at')->label('Time')->dateTime()->sortable(),
+                TextColumn::make('created_at')
+                    ->label(__('Time'))
+                    ->dateTime()
+                    ->sortable(),
                 TextColumn::make('event')
-                    ->label('Action')
+                    ->label(__('Action'))
                     ->searchable()
                     ->sortable()
-                    ->wrap()
-                    ->limit(32)
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'created' => 'success',
-                        'updated' => 'warning',
-                        'deleted' => 'danger',
-                        'login'   => 'info',
-                        'logout'  => 'gray',
-                        default   => 'primary',
-                    }),
+                    ->badge(),
                 TextColumn::make('auditable_type')
-                    ->label('Target')
+                    ->label(__('Target'))
+                    ->formatStateUsing(fn (string $state): string => class_basename($state))
                     ->searchable()
-                    ->sortable()
-                    ->wrap()
-                    ->limit(32)
-                    ->formatStateUsing(fn (string $state) => class_basename($state)),
+                    ->sortable(),
                 TextColumn::make('ip_address')
-                    ->searchable()
-                    ->sortable()
-                    ->wrap()
-                    ->limit(40),
+                    ->label(__('IP Address'))
+                    ->searchable(),
             ])
-            ->headerActions([]) // لا يمكن إنشاء سجل يدوياً
-            ->actions([
-                ViewAction::make(), // 👁️ للقراءة ورؤية JSON فقط
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 }

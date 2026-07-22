@@ -41,7 +41,7 @@ class KpiStatsOverview extends BaseWidget
     }
 
     /**
-     * @param array<string, mixed> $metric
+     * @param  array<string, mixed>  $metric
      */
     private function makeStat(array $metric): Stat
     {
@@ -51,15 +51,16 @@ class KpiStatsOverview extends BaseWidget
 
         return Stat::make(
             __($metric['label_key']),
-            new HtmlString('<span dir="ltr">' . e($metric['value']) . '</span>')
+            new HtmlString('<span dir="ltr">'.e($metric['value']).'</span>')
         )
-            ->description(new HtmlString('<span dir="ltr">' . e($changeText) . '</span> ' . e(__('kpi.change.vs_comparison'))))
+            ->description(new HtmlString('<span dir="ltr">'.e($changeText).'</span> '.e(__('kpi.change.vs_comparison'))))
             ->descriptionIcon($metric['icon'])
             ->color($metric['color'])
             ->chart($metric['sparkline'])
             ->extraAttributes([
                 'aria-label' => __($metric['tooltip_key']),
                 'title' => __($metric['tooltip_key']),
+                'class' => 'transition-all duration-300 hover:shadow-md',
             ]);
     }
 }

@@ -1,10 +1,10 @@
 <?php
+
 namespace App\Filament\Resources\UserResource\Widgets;
 
 use App\Models\User;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Carbon\Carbon;
 
 class TenantStatsWidget extends BaseWidget
 {
@@ -12,36 +12,34 @@ class TenantStatsWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        if (!$this->record) return [];
+        if ($this->record === null) {
+            return [];
+        }
 
-        $today = Carbon::today();
-        $thisMonth = Carbon::now()->startOfMonth();
-        $thisYear = Carbon::now()->startOfYear();
-
-        // 1. حساب المبيعات (Sales)
-        $salesToday = $this->record->sales()->where('created_at', '>=', $today)->where('payment_status', '!=', 'voided')->get();
-        $salesMonth = $this->record->sales()->where('created_at', '>=', $thisMonth)->where('payment_status', '!=', 'voided')->get();
-        $salesYear = $this->record->sales()->where('created_at', '>=', $thisYear)->where('payment_status', '!=', 'voided')->get();
-
-        // 2. حساب المقبوضات (Receipts / Cash Injections)
-        $receiptsToday = $this->record->cashTransactions()->where('transaction_type', 'like', '%_in')->where('created_at', '>=', $today)->get();
-        $receiptsMonth = $this->record->cashTransactions()->where('transaction_type', 'like', '%_in')->where('created_at', '>=', $thisMonth)->get();
-        $receiptsYear = $this->record->cashTransactions()->where('transaction_type', 'like', '%_in')->where('created_at', '>=', $thisYear)->get();
+        $subscription = $this->record->subscription()->with('plan')->first();
+        $paymentStats = $this->record->payments()
+            ->where('status', 'successful')
+            ->selectRaw('COUNT(*) as payments_count, COALESCE(SUM(amount), 0) as revenue')
+            ->first();
+        $activeSessions = $this->record->tokens()->count();
+        $auditEvents = $this->record->auditLogs()->count();
 
         return [
-            Stat::make('Today', 'Sales: ' . $salesToday->count() . ' | Receipts: ' . $receiptsToday->count())
-                ->description('Rev: $' . number_format($salesToday->sum('total_price'), 2) . ' | Cash In: $' . number_format($receiptsToday->sum('amount'), 2))
-                ->descriptionIcon('heroicon-m-arrow-trending-up')
-                ->color('success'),
-
-            Stat::make('This Month', 'Sales: ' . $salesMonth->count() . ' | Receipts: ' . $receiptsMonth->count())
-                ->description('Rev: $' . number_format($salesMonth->sum('total_price'), 2) . ' | Cash In: $' . number_format($receiptsMonth->sum('amount'), 2))
-                ->descriptionIcon('heroicon-m-calendar-days')
+            Stat::make(__('Current Plan'), $subscription?->plan?->name ?? __('Free'))
+                ->description($subscription === null ? __('No active subscription') : __(ucfirst($subscription->status)))
+                ->descriptionIcon('heroicon-m-credit-card')
+                ->color($subscription?->status === 'active' ? 'success' : 'gray'),
+            Stat::make(__('Total Revenue'), '$'.number_format((float) ($paymentStats?->revenue ?? 0), 2))
+                ->description(number_format((int) ($paymentStats?->payments_count ?? 0)).' '.__('Successful Payments'))
+                ->descriptionIcon('heroicon-m-banknotes')
                 ->color('primary'),
-
-            Stat::make('This Year', 'Sales: ' . $salesYear->count() . ' | Receipts: ' . $receiptsYear->count())
-                ->description('Rev: $' . number_format($salesYear->sum('total_price'), 2) . ' | Cash In: $' . number_format($receiptsYear->sum('amount'), 2))
-                ->descriptionIcon('heroicon-m-calendar')
+            Stat::make(__('Active Sessions'), number_format($activeSessions))
+                ->description(__('Connected tenant devices'))
+                ->descriptionIcon('heroicon-m-device-phone-mobile')
+                ->color($activeSessions > 0 ? 'info' : 'gray'),
+            Stat::make(__('Audit Events'), number_format($auditEvents))
+                ->description(__('Recorded account activity'))
+                ->descriptionIcon('heroicon-m-clipboard-document-check')
                 ->color('warning'),
         ];
     }

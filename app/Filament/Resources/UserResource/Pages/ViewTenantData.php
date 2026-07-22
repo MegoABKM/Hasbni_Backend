@@ -1,19 +1,32 @@
 <?php
+
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
-use Filament\Resources\Pages\ViewRecord;
+use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\ProfileRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\TokensRelationManager;
 use App\Filament\Resources\UserResource\Widgets\TenantStatsWidget;
-use App\Filament\Resources\UserResource\RelationManagers\SalesRelationManager;
-use App\Filament\Resources\UserResource\RelationManagers\ProductsRelationManager;
-use App\Filament\Resources\UserResource\RelationManagers\CashTransactionsRelationManager;
-use App\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager; // 🚀 استدعاء الكلاس الجديد
+use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ViewTenantData extends ViewRecord
 {
     protected static string $resource = UserResource::class;
-    
-    protected ?string $heading = 'Tenant Dashboard & Data';
+
+    public function getHeading(): string|Htmlable
+    {
+        return __('Tenant Details');
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            UserResource::impersonationAction(),
+        ];
+    }
 
     protected function getHeaderWidgets(): array
     {
@@ -25,10 +38,11 @@ class ViewTenantData extends ViewRecord
     public function getRelationManagers(): array
     {
         return [
-            SalesRelationManager::class,
-            CashTransactionsRelationManager::class,
-            ProductsRelationManager::class,
-            AuditLogsRelationManager::class, // 🚀 تمت الإضافة هنا!
+            ProfileRelationManager::class,
+            SubscriptionsRelationManager::class,
+            PaymentsRelationManager::class,
+            TokensRelationManager::class,
+            AuditLogsRelationManager::class,
         ];
     }
 }

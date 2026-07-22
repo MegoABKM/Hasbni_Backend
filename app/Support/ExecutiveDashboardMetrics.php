@@ -2,154 +2,73 @@
 
 namespace App\Support;
 
-use App\Models\Customer;
-use App\Models\Expense;
-use App\Models\Payment;
-use App\Models\Product;
-use App\Models\Sale;
-use App\Models\Subscription;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\HtmlString;
+use App\Services\KpiService;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\HtmlString;
 
-class ExecutiveDashboardMetrics
+final class ExecutiveDashboardMetrics
 {
-    public const PERIOD_DAYS = 30;
+    public function __construct(private readonly KpiService $kpis) {}
 
-    public static function currentStart(): Carbon { return now()->subDays(self::PERIOD_DAYS); }
-    public static function previousStart(): Carbon { return now()->subDays(self::PERIOD_DAYS * 2); }
-    public static function previousEnd(): Carbon { return self::currentStart(); }
+    /**
+     * @return array<string, float|int>
+     */
+    public function snapshot(): array
+    {
+        return $this->kpis->summary(['period' => 'last_30_days']);
+    }
 
-    public static function percentChange(float|int $current, float|int $previous): ?float
+    public function money(float|int $amount): string
+    {
+        $amount = (float) $amount;
+
+        return match (true) {
+            abs($amount) >= 1_000_000 => '$'.number_format($amount / 1_000_000, 2).'M',
+            abs($amount) >= 10_000 => '$'.number_format($amount / 1_000, 1).'K',
+            default => '$'.number_format($amount, 2),
+        };
+    }
+
+    public function percentChange(float|int $current, float|int $previous): ?float
     {
         if ((float) $previous === 0.0) {
             return (float) $current === 0.0 ? 0.0 : null;
         }
+
         return (($current - $previous) / abs($previous)) * 100;
     }
 
-    public static function formatPercentChange(?float $change): string
+    public function comparison(float|int $current, float|int $previous): Htmlable
     {
-        if ($change === null) return 'new activity';
-        if (abs($change) < 0.05) return 'stable';
-        return ($change > 0 ? '+' : '') . number_format($change, 1) . '%';
+        $change = $this->percentChange($current, $previous);
+        $formatted = match (true) {
+            $change === null => __('kpi.change.new_activity'),
+            abs($change) < 0.05 => __('kpi.change.stable'),
+            default => ($change > 0 ? '+' : '').number_format($change, 1).'%',
+        };
+
+        return new HtmlString('<span dir="ltr">'.e($formatted).'</span> '.e(__('kpi.change.vs_comparison')));
     }
 
-    public static function trendIcon(float|int $current, float|int $previous, bool $higherIsBetter = true): string
+    public function trendIcon(float|int $current, float|int $previous): string
     {
-        if (abs($current - $previous) < 0.0001) return 'heroicon-m-minus';
-        return ($current > $previous) ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down';
-    }
-
-    public static function trendColor(float|int $current, float|int $previous, bool $higherIsBetter = true): string
-    {
-        if (abs($current - $previous) < 0.0001) return 'gray';
-        $improved = $higherIsBetter ? $current > $previous : $current < $previous;
-        return $improved ? 'success' : 'danger';
-    }
-
-    public static function comparison(float|int $current, float|int $previous, string $previousLabel = 'previous 30 days'): Htmlable
-    {
-        $change = self::formatPercentChange(self::percentChange($current, $previous));
-        $time = now()->format('H:i');
-        return new HtmlString("<span dir='ltr' style='display:inline-block'>{$change} vs {$previousLabel} | updated {$time}</span>");
-    }
-
-    public static function money(float|int $amount): string
-    {
-        $amount = (float) $amount;
-        if (abs($amount) >= 1000000) return '$' . number_format($amount / 1000000, 2) . 'M';
-        if (abs($amount) >= 10000) return '$' . number_format($amount / 1000, 1) . 'K';
-        return '$' . number_format($amount, 2);
-    }
-
-    // 🚀 SaaS Platform Subscription Income (From `payments` table)
-    public static function platformRevenue(Carbon $start, Carbon $end): float
-    {
-        return (float) Payment::query()
-            ->where('status', 'successful')
-            ->whereBetween('paid_at', [$start, $end])
-            ->sum('amount');
-    }
-
-    // 🚀 Tenant POS Sales Volume (From `sales` table, kept separate)
-    public static function posRevenue(Carbon $start, Carbon $end): float
-    {
-        return (float) Sale::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('payment_status', '!=', 'voided')
-            ->sum(DB::raw('total_price / CASE WHEN rate_to_usd_at_sale > 0 THEN rate_to_usd_at_sale ELSE 1 END'));
-    }
-
-    public static function grossProfit(Carbon $start, Carbon $end): float
-    {
-        return (float) Sale::query()
-            ->whereBetween('created_at', [$start, $end])
-            ->where('payment_status', '!=', 'voided')
-            ->sum('total_profit');
-    }
-
-    public static function operatingExpenses(Carbon $start, Carbon $end): float
-    {
-        return (float) Expense::query()
-            ->whereBetween('expense_date', [$start, $end])
-            ->sum('amount');
-    }
-
-    public static function netProfit(Carbon $start, Carbon $end): float
-    {
-        return self::grossProfit($start, $end) - self::operatingExpenses($start, $end);
-    }
-
-    public static function churnCount(Carbon $start, Carbon $end): int
-    {
-        return Subscription::query()
-            ->whereIn('status', ['expired', 'canceled'])
-            ->whereBetween('ends_at', [$start, $end])
-            ->count();
-    }
-
-    public static function newSubscriberCount(Carbon $start, Carbon $end): int
-    {
-        return Subscription::query()
-            ->whereBetween('starts_at', [$start, $end])
-            ->distinct('user_id')
-            ->count('user_id');
-    }
-
-    public static function activeSubscriberCount(): int
-    {
-        return Subscription::query()
-            ->where('status', 'active')
-            ->where('ends_at', '>=', now())
-            ->distinct('user_id')
-            ->count('user_id');
-    }
-
-    public static function lowStockCount(): int
-    {
-        return Product::query()->whereColumn('quantity', '<=', 'alert_threshold')->count();
-    }
-
-    public static function outOfStockCount(): int
-    {
-        return Product::query()->where('quantity', '<=', 0)->count();
-    }
-
-    public static function outstandingCustomerBalance(): float
-    {
-        return (float) Customer::query()->where('balance', '>', 0)->sum('balance');
-    }
-
-    public static function dailySeries(callable $resolver, int $days = 7): array
-    {
-        $series = [];
-        for ($index = $days - 1; $index >= 0; $index--) {
-            $date = now()->subDays($index)->toDateString();
-            $series[] = round((float) $resolver($date), 2);
+        if (abs($current - $previous) < 0.0001) {
+            return 'heroicon-m-minus';
         }
-        return $series;
+
+        return $current > $previous
+            ? 'heroicon-m-arrow-trending-up'
+            : 'heroicon-m-arrow-trending-down';
+    }
+
+    public function trendColor(float|int $current, float|int $previous, bool $higherIsBetter = true): string
+    {
+        if (abs($current - $previous) < 0.0001) {
+            return 'gray';
+        }
+
+        $improved = $higherIsBetter ? $current > $previous : $current < $previous;
+
+        return $improved ? 'success' : 'danger';
     }
 }

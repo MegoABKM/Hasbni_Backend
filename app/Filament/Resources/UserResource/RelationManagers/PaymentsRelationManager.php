@@ -1,48 +1,75 @@
 <?php
+
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
-use App\Models\Payment;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Schemas\Schema; 
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Actions\CreateAction; 
-use Filament\Actions\EditAction;
+use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\Action; // 🚀 تم التصحيح هنا
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Database\Eloquent\Model;
 
 class PaymentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'payments';
+
     protected static ?string $recordTitleAttribute = 'transaction_id';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return __('Payments');
+    }
 
     public function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            TextInput::make('amount')->numeric()->prefix('$')->required(),
-            TextInput::make('currency')->default('USD')->required(),
+        return $schema->components([
+            TextInput::make('amount')
+                ->label(__('Amount'))
+                ->numeric()
+                ->prefix('$')
+                ->required(),
+            TextInput::make('currency')
+                ->label(__('Currency'))
+                ->default('USD')
+                ->required()
+                ->maxLength(3),
             Select::make('payment_method')
-                ->options(['manual' => 'Manual', 'stripe' => 'Stripe', 'paypal' => 'PayPal', 'myfatoorah' => 'MyFatoorah'])
+                ->label(__('Payment Method'))
+                ->options([
+                    'manual' => __('Manual'),
+                    'stripe' => __('Stripe'),
+                    'paypal' => __('PayPal'),
+                    'myfatoorah' => __('MyFatoorah'),
+                ])
                 ->default('manual')
                 ->required(),
             Select::make('status')
-                ->options(['successful' => 'Successful', 'failed' => 'Failed', 'refunded' => 'Refunded'])
+                ->label(__('Status'))
+                ->options([
+                    'successful' => __('Successful'),
+                    'failed' => __('Failed'),
+                    'refunded' => __('Refunded'),
+                ])
                 ->default('successful')
                 ->required(),
-            TextInput::make('transaction_id')->label('Transaction ID'),
-            DateTimePicker::make('paid_at')->default(now())->required(),
-            
+            TextInput::make('transaction_id')
+                ->label(__('Transaction ID'))
+                ->maxLength(255),
+            DateTimePicker::make('paid_at')
+                ->label(__('Paid At'))
+                ->default(now())
+                ->required(),
             Textarea::make('failure_reason')
-                ->label('Failure Log (Gateway Error)')
+                ->label(__('Failure Log'))
                 ->disabled()
                 ->columnSpanFull()
-                ->visible(fn ($get) => $get('status') === 'failed'),
+                ->visible(fn (callable $get): bool => $get('status') === 'failed'),
         ]);
     }
 
@@ -53,22 +80,21 @@ class PaymentsRelationManager extends RelationManager
             ->defaultSort('paid_at', 'desc')
             ->columns([
                 TextColumn::make('amount')
-                    ->money('usd')
+                    ->label(__('Amount'))
+                    ->money(fn ($record): string => $record->currency ?? 'USD')
                     ->sortable(),
                 TextColumn::make('payment_method')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'stripe' => 'info',
-                        'paypal' => 'primary',
-                        'myfatoorah' => 'success',
-                        'manual' => 'gray',
-                        default => 'gray',
-                    }),
+                    ->label(__('Payment Method'))
+                    ->formatStateUsing(fn (string $state): string => __(match ($state) {
+                        'stripe' => 'Stripe',
+                        'paypal' => 'PayPal',
+                        'myfatoorah' => 'MyFatoorah',
+                        default => 'Manual',
+                    }))
+                    ->badge(),
                 TextColumn::make('status')
-                    ->searchable()
-                    ->sortable()
+                    ->label(__('Status'))
+                    ->formatStateUsing(fn (string $state): string => __(ucfirst($state)))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'successful' => 'success',
@@ -76,86 +102,25 @@ class PaymentsRelationManager extends RelationManager
                         'refunded' => 'warning',
                         default => 'gray',
                     }),
-                
                 TextColumn::make('failure_reason')
-                    ->label('Error Log')
+                    ->label(__('Error Log'))
                     ->limit(30)
                     ->wrap()
-                    ->tooltip(function (TextColumn $column): ?string {
-                        $state = $column->getState();
-                        return strlen((string)$state) > 30 ? $state : null;
-                    })
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('transaction_id')
-                    ->label('Transaction ID')
+                    ->label(__('Transaction ID'))
                     ->searchable()
-                    ->sortable()
-                    ->wrap()
-                    ->limit(32)
+                    ->copyable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('paid_at')
+                    ->label(__('Paid At'))
                     ->dateTime()
                     ->sortable(),
             ])
             ->headerActions([
-                CreateAction::make()->label('Add Payment'),
+                CreateAction::make()->label(__('Add Payment')),
             ])
-            ->actions([
-                // 🚀 زر الاسترداد
-                Action::make('refund')
-                    ->label('Refund')
-                    ->icon('heroicon-o-arrow-uturn-left')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Process Financial Refund')
-                    ->modalDescription('Are you sure? This will refund the money to the customer via the payment gateway and mark the payment as Refunded.')
-                    ->visible(fn (Payment $record) => $record->status === 'successful')
-                    ->action(function (Payment $record) {
-                        try {
-                            if ($record->payment_method === 'myfatoorah') {
-                                $response = Http::withToken(env('MYFATOORAH_TOKEN'))->post(env('MYFATOORAH_URL', 'https://apitest.myfatoorah.com') . '/v2/MakeRefund', [
-                                    'KeyType' => 'InvoiceId',
-                                    'Key' => $record->transaction_id,
-                                    'RefundChargeOnCustomer' => false,
-                                    'ServiceChargeOnCustomer' => false,
-                                    'Amount' => $record->amount,
-                                    'Comment' => 'Requested via Admin Panel'
-                                ]);
-                                
-                                if (!$response->successful() || !$response->json('IsSuccess')) {
-                                    throw new \Exception($response->json('Message') ?? 'MyFatoorah Refund Failed');
-                                }
-                            } 
-                            elseif ($record->payment_method === 'stripe') {
-                                if (!env('STRIPE_SECRET')) {
-                                    throw new \Exception('Stripe is not configured.');
-                                }
-
-                                $response = Http::asForm()
-                                    ->withToken(env('STRIPE_SECRET'))
-                                    ->post('https://api.stripe.com/v1/refunds', [
-                                        'payment_intent' => $record->transaction_id,
-                                    ]);
-
-                                if (!$response->successful()) {
-                                    throw new \Exception($response->json('error.message') ?? 'Stripe refund failed.');
-                                }
-                            }
-
-                            $record->update(['status' => 'refunded']);
-                            
-                            if ($record->subscription_id) {
-                                \App\Models\Subscription::where('id', $record->subscription_id)->update(['status' => 'canceled']);
-                            }
-
-                            Notification::make()->title('Refund processed successfully!')->success()->send();
-                        } catch (\Exception $e) {
-                            Notification::make()->title('Refund Failed')->body($e->getMessage())->danger()->send();
-                        }
-                    }),
-
+            ->recordActions([
                 EditAction::make(),
                 DeleteAction::make(),
             ]);
