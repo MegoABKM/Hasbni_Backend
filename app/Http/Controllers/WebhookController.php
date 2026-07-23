@@ -9,6 +9,7 @@ use App\Saas\Models\Payment;
 use App\Saas\Models\Plan;
 use App\Saas\Models\PromoCode;
 use App\Saas\Models\Subscription;
+use App\Saas\Models\WebhookLog;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,20 @@ final class WebhookController extends Controller
 {
     public function handleStripe(Request $request): JsonResponse
     {
+        $payload = $request->json()->all();
+        $log = WebhookLog::query()->create([
+            'provider' => 'stripe',
+            'event_type' => (string) ($payload['type'] ?? 'unknown'),
+            'payload' => $payload,
+            'status' => 'pending',
+        ]);
+
         if (! $this->hasValidStripeSignature($request)) {
+            $log->update([
+                'status' => 'failed',
+                'error_message' => 'Invalid Stripe signature.',
+            ]);
+
             Log::warning('Stripe webhook rejected because its signature was invalid', [
                 'ip' => $request->ip(),
             ]);
@@ -27,7 +41,38 @@ final class WebhookController extends Controller
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
-        $payload = $request->json()->all();
+        try {
+            $response = $this->processPayload($payload);
+
+            $log->update([
+                'status' => $response->isSuccessful() ? 'success' : 'failed',
+                'error_message' => $response->isSuccessful() ? null : $response->getContent(),
+                'processed_at' => now(),
+                'attempts' => 1,
+            ]);
+
+            return $response;
+        } catch (\Throwable $exception) {
+            $log->update([
+                'status' => 'failed',
+                'error_message' => $exception->getMessage(),
+                'attempts' => 1,
+            ]);
+
+            Log::error('Stripe webhook processing failed.', [
+                'webhook_log_id' => $log->getKey(),
+                'exception' => $exception,
+            ]);
+
+            return response()->json(['error' => 'Webhook processing failed'], 500);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function processPayload(array $payload): JsonResponse
+    {
         $type = (string) ($payload['type'] ?? '');
         $object = $payload['data']['object'] ?? null;
 
@@ -93,6 +138,10 @@ final class WebhookController extends Controller
         $cycle = abs((float) $plan->yearly_price - $amountPaid) < 0.005 ? 'yearly' : 'monthly';
         $daysToAdd = $cycle === 'yearly' ? 365 : 30;
         $transactionId = (string) ($session['payment_intent'] ?? $session['id'] ?? '');
+
+        if ($transactionId === '') {
+            return response()->json(['error' => 'Stripe transaction identifier is missing'], 422);
+        }
         $stripeSubscriptionId = filled($session['subscription'] ?? null)
             ? (string) $session['subscription']
             : null;
@@ -119,10 +168,15 @@ final class WebhookController extends Controller
                     'plan_id' => $plan->getKey(),
                     'stripe_subscription_id' => $stripeSubscriptionId,
                     'stripe_customer_id' => $stripeCustomerId,
+                    'provider' => 'stripe',
                     'status' => 'active',
                     'billing_cycle' => $cycle,
                     'starts_at' => now(),
                     'ends_at' => now()->addDays($daysToAdd),
+                    'grace_period_ends_at' => null,
+                    'payment_failed_at' => null,
+                    'dunning_last_notified_day' => null,
+                    'is_locked' => false,
                 ],
             );
 
@@ -139,14 +193,16 @@ final class WebhookController extends Controller
             }
 
             Payment::query()->firstOrCreate(
-                ['transaction_id' => $transactionId],
+                [
+                    'payment_method' => 'stripe',
+                    'transaction_id' => $transactionId,
+                ],
                 [
                     'user_id' => $user->getKey(),
                     'subscription_id' => $subscription->getKey(),
                     'promo_code_id' => $promoCodeId,
                     'amount' => $amountPaid,
                     'currency' => $currency,
-                    'payment_method' => 'stripe',
                     'status' => 'successful',
                     'paid_at' => now(),
                 ],
@@ -237,28 +293,40 @@ final class WebhookController extends Controller
             return response()->json(['status' => 'ignored']);
         }
 
-        $invoiceId = (string) ($invoice['id'] ?? '');
+        $invoiceId = (string) ($invoice['id'] ?? $invoice['payment_intent'] ?? '');
+
+        if ($invoiceId === '') {
+            return response()->json(['error' => 'Stripe invoice identifier is missing'], 422);
+        }
+
         $amount = round(((int) ($invoice['amount_due'] ?? $invoice['amount_remaining'] ?? 0)) / 100, 2);
         $reason = data_get($invoice, 'last_payment_error.message')
             ?? 'Stripe invoice payment failed.';
 
         Payment::query()->firstOrCreate(
-            ['transaction_id' => $invoiceId],
+            [
+                'payment_method' => 'stripe',
+                'transaction_id' => $invoiceId,
+            ],
             [
                 'user_id' => $user->getKey(),
                 'subscription_id' => $subscription?->getKey(),
                 'amount' => $amount,
                 'currency' => strtoupper((string) ($invoice['currency'] ?? 'USD')),
-                'payment_method' => 'stripe',
                 'status' => 'failed',
                 'failure_reason' => $reason,
             ],
         );
 
-        if ($subscription && (bool) config('saas.stripe.suspend_on_payment_failure', false)) {
+        if ($subscription) {
             $subscription->update([
-                'status' => 'canceled',
-                'ends_at' => now(),
+                'status' => (bool) config('saas.stripe.suspend_on_payment_failure', false)
+                    ? 'expired'
+                    : $subscription->status,
+                'payment_failed_at' => now(),
+                'grace_period_ends_at' => now()->addDays(7),
+                'dunning_last_notified_day' => null,
+                'is_locked' => false,
             ]);
         }
 

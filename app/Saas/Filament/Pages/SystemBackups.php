@@ -1,13 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Pages;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class SystemBackups extends Page
@@ -15,6 +20,13 @@ class SystemBackups extends Page
     protected string $view = 'filament.pages.system-backups';
 
     public array $backupFiles = [];
+
+    public string $password = '';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+    }
 
     public static function getNavigationIcon(): string
     {
@@ -62,6 +74,8 @@ class SystemBackups extends Page
 
     public function generateBackup(): void
     {
+        $this->verifyPassword();
+
         try {
             $database = (string) config('database.connections.mysql.database');
             $tablesKey = 'Tables_in_'.$database;
@@ -129,6 +143,8 @@ class SystemBackups extends Page
 
     public function downloadBackup(string $name): mixed
     {
+        $this->verifyPassword();
+
         $safeName = basename($name);
 
         if ($safeName !== $name || ! str_ends_with($safeName, '.sql')) {
@@ -146,6 +162,20 @@ class SystemBackups extends Page
         Notification::make()->title(__('File Not Found'))->danger()->send();
 
         return null;
+    }
+
+    private function verifyPassword(): void
+    {
+        $this->validate(['password' => ['required', 'string']]);
+        $user = auth()->user();
+
+        if (! $user instanceof User || $user->role !== 'super_admin' || ! Hash::check($this->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => __('The password is incorrect.'),
+            ]);
+        }
+
+        $this->reset('password');
     }
 
     public function deleteBackup(string $name): void

@@ -164,7 +164,19 @@ class AuthController extends Controller
         $this->logAuthEvent($user, 'login');
         $token = $user->createToken('mobile')->plainTextToken;
 
-        return response()->json(['access_token' => $token, 'user' => $user]);
+        $subscription = $user->subscription()->first();
+
+        return response()->json([
+            'access_token' => $token,
+            'user' => $user,
+            'subscription_access' => [
+                'status' => $subscription?->status,
+                'is_locked' => (bool) $subscription?->is_locked,
+                'grace_period_ends_at' => $subscription?->grace_period_ends_at?->toIso8601String(),
+                'can_write' => $subscription === null
+                    || (! $subscription->is_locked && $subscription->grace_period_ends_at?->isPast() !== true),
+            ],
+        ]);
     }
 
     public function logout(Request $request)

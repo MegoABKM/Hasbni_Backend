@@ -9,9 +9,22 @@
                 {{ __('Backups can contain sensitive tenant and billing data. Store downloaded files securely.') }}
             </div>
 
-            <x-filament::button wire:click="generateBackup" color="success" icon="heroicon-o-plus-circle">
-                {{ __('Create Backup') }}
-            </x-filament::button>
+            <div class="w-full max-w-sm space-y-2">
+                <x-filament::input.wrapper>
+                    <x-filament::input
+                        type="password"
+                        wire:model="password"
+                        autocomplete="current-password"
+                        placeholder="{{ __('Confirm Your Password') }}"
+                    />
+                </x-filament::input.wrapper>
+                @error('password')
+                    <p class="text-sm text-danger-600">{{ $message }}</p>
+                @enderror
+                <x-filament::button wire:click="generateBackup" color="success" icon="heroicon-o-plus-circle">
+                    {{ __('Create Backup') }}
+                </x-filament::button>
+            </div>
         </div>
 
         @if (empty($backupFiles))

@@ -2,6 +2,7 @@
 
 namespace App\Saas\Filament\Resources;
 
+use App\Models\User;
 use App\Saas\Filament\Resources\PromoCodeResource\Pages;
 use App\Saas\Models\PromoCode;
 use Filament\Actions\DeleteAction;
@@ -19,6 +20,12 @@ use Illuminate\Database\Eloquent\Builder;
 class PromoCodeResource extends Resource
 {
     protected static ?string $model = PromoCode::class;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

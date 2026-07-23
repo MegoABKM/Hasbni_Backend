@@ -32,6 +32,16 @@ return [
         'token' => env('MYFATOORAH_TOKEN'),
     ],
 
+    'google_play' => [
+        'package_name' => env('GOOGLE_PLAY_PACKAGE_NAME'),
+        'credentials' => env('GOOGLE_PLAY_CREDENTIALS', storage_path('app/firebase-auth.json')),
+    ],
+
+    'apple' => [
+        'bundle_id' => env('APPLE_BUNDLE_ID'),
+        'root_certificate' => env('APPLE_ROOT_CERTIFICATE', storage_path('app/apple/AppleRootCA-G3.cer')),
+    ],
+
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),

@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources;
 
 use App\Models\Instruction;
+use App\Models\User;
 use App\Saas\Filament\Resources\InstructionResource\Pages\ManageInstructions;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -18,6 +21,12 @@ use Filament\Tables\Table;
 class InstructionResource extends Resource
 {
     protected static ?string $model = Instruction::class;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

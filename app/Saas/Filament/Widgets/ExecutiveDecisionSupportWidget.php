@@ -21,6 +21,12 @@ class ExecutiveDecisionSupportWidget extends Widget
 
     protected static ?int $sort = 3;
 
+    public static function canView(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+    }
+
     protected int|string|array $columnSpan = 'full';
 
     protected string $view = 'filament.widgets.executive-decision-support';

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Saas\Filament\Pages;
 
+use App\Models\User;
 use App\Providers\PaymentConfigServiceProvider;
 use App\Saas\Models\AppConfig;
 use Filament\Forms\Components\FileUpload;
@@ -43,6 +44,11 @@ class GlobalSettings extends Page implements HasForms
     }
 
     public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+    }
 
     public function mount(): void
     {

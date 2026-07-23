@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Saas\Filament\Pages\Kpi;
 
+use App\Models\User;
 use App\Saas\Services\KpiService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -17,6 +18,12 @@ class SaasAnalytics extends BaseKpiPage
     protected static string $navigationLabelKey = 'kpi.nav.saas';
 
     protected static int $navigationOrder = 1;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+    }
 
     protected function getHeaderActions(): array
     {

@@ -15,6 +15,11 @@ class SystemOverviewWidget extends BaseWidget
 
     protected static ?int $sort = 5;
 
+    public static function canView(): bool
+    {
+        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+    }
+
     protected function getStats(): array
     {
         $stats = Cache::remember('saas:system-overview:v1', 300, fn (): array => [

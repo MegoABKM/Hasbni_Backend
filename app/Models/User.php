@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Saas\Models\Payment;
 use App\Saas\Models\Subscription;
+use App\Saas\Models\TenantFeatureFlag;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
@@ -168,6 +169,30 @@ class User extends Authenticatable implements FilamentUser
     public function supportTickets()
     {
         return $this->hasMany(SupportTicket::class)->latest();
+    }
+
+    public function tenantFeatureFlags()
+    {
+        return $this->hasMany(TenantFeatureFlag::class);
+    }
+
+    public function hasFeature(string $key): bool
+    {
+        $override = $this->tenantFeatureFlags()
+            ->where('feature_key', $key)
+            ->value('is_enabled');
+
+        if ($override !== null) {
+            return (bool) $override;
+        }
+
+        $features = $this->subscription?->plan?->features ?? [];
+
+        if (is_string($features)) {
+            $features = json_decode($features, true) ?: [];
+        }
+
+        return filter_var($features[$key] ?? false, FILTER_VALIDATE_BOOL);
     }
 
     // 🚀 الدالة الجديدة لفرز أصحاب باقة الإنتربرايز 🚀

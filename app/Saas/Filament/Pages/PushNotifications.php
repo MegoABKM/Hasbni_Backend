@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Pages;
 
+use App\Models\User;
 use App\Saas\Models\AppConfig;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -22,6 +25,12 @@ class PushNotifications extends Page implements HasForms
     protected string $view = 'filament.pages.push-notifications';
 
     public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

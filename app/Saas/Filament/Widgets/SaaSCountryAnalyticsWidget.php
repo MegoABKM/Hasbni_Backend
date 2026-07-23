@@ -2,6 +2,7 @@
 
 namespace App\Saas\Filament\Widgets;
 
+use App\Models\User;
 use App\Saas\Services\KpiService;
 use Filament\Widgets\Widget;
 use Illuminate\Database\Query\Builder;
@@ -17,6 +18,12 @@ class SaaSCountryAnalyticsWidget extends Widget
     protected int|string|array $columnSpan = 'full';
 
     protected string $view = 'filament.widgets.saas-country-analytics-widget';
+
+    public static function canView(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+    }
 
     /**
      * @return array<string, mixed>

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Models;
 
 use App\Models\User;
@@ -18,8 +20,10 @@ class Payment extends Model
         'payment_method',
         'status',
         'transaction_id',
+        'refund_id',
         'failure_reason',
         'paid_at',
+        'refunded_at',
     ];
 
     protected function casts(): array
@@ -27,6 +31,7 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'refunded_at' => 'datetime',
         ];
     }
 

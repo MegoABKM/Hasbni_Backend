@@ -32,7 +32,9 @@
     </style>
 </head>
 <body>
-    <button class="print-button no-print" type="button" onclick="window.print()">{{ __('Print') }}</button>
+    @unless ($pdf ?? false)
+        <button class="print-button no-print" type="button" onclick="window.print()">{{ __('Print') }}</button>
+    @endunless
 
     <main class="receipt-page">
         <article class="receipt">

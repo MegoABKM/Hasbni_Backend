@@ -15,6 +15,10 @@ Schedule::command('saas:metrics:snapshot')
     ->dailyAt('00:10')
     ->withoutOverlapping();
 
+Schedule::command('saas:dunning:process')
+    ->dailyAt('08:00')
+    ->withoutOverlapping();
+
 Schedule::call(function (): void {
     User::query()
         ->whereNull('email_verified_at')

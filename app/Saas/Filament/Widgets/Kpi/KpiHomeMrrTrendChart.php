@@ -2,6 +2,7 @@
 
 namespace App\Saas\Filament\Widgets\Kpi;
 
+use App\Models\User;
 use App\Saas\Services\KpiService;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
@@ -17,6 +18,12 @@ class KpiHomeMrrTrendChart extends ChartWidget
     protected string $color = 'primary';
 
     protected ?string $maxHeight = '260px';
+
+    public static function canView(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+    }
 
     public function getHeading(): ?string
     {

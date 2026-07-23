@@ -17,10 +17,19 @@ class Subscription extends Model
         'plan_id',
         'stripe_subscription_id',
         'stripe_customer_id',
+        'provider',
+        'provider_purchase_token',
+        'provider_purchase_token_hash',
+        'provider_original_transaction_id',
+        'auto_renews',
         'status',
         'billing_cycle',
         'starts_at',
         'ends_at',
+        'grace_period_ends_at',
+        'payment_failed_at',
+        'dunning_last_notified_day',
+        'is_locked',
     ];
 
     protected function casts(): array
@@ -28,6 +37,12 @@ class Subscription extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'grace_period_ends_at' => 'datetime',
+            'payment_failed_at' => 'datetime',
+            'dunning_last_notified_day' => 'integer',
+            'is_locked' => 'boolean',
+            'auto_renews' => 'boolean',
+            'provider_purchase_token' => 'encrypted',
         ];
     }
 

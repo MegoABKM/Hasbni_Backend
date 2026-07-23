@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Pages;
 
 use App\Jobs\SendCampaignEmailJob;
@@ -21,6 +23,12 @@ class EmailCampaigns extends Page implements HasForms
     protected string $view = 'filament.pages.email-campaigns';
 
     public ?array $data = [];
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

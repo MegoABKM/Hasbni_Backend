@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Saas\Filament\Exports\PaymentExporter;
 use App\Saas\Filament\Resources\PaymentResource\Pages;
 use App\Saas\Models\Payment;
+use App\Saas\Services\PaymentRefundService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -16,6 +17,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -190,12 +192,36 @@ class PaymentResource extends Resource
                     ->columnMappingColumns(2),
             ])
             ->recordActions([
+                Action::make('refund')
+                    ->label(__('Refund Payment'))
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('danger')
+                    ->visible(fn (Payment $record): bool => $record->status === 'successful'
+                        && in_array($record->payment_method, ['stripe', 'myfatoorah'], true))
+                    ->requiresConfirmation()
+                    ->modalDescription(__('The refund will be submitted directly to the payment gateway and cannot be undone.'))
+                    ->action(function (Payment $record): void {
+                        app(PaymentRefundService::class)->refund($record);
+
+                        Notification::make()
+                            ->title(__('Payment refunded successfully'))
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('print_receipt')
                     ->label(__('Print Receipt'))
                     ->icon('heroicon-o-printer')
                     ->color('gray')
                     ->url(
                         fn (Payment $record): string => route('payment.receipt', $record->getKey()),
+                        shouldOpenInNewTab: true,
+                    ),
+                Action::make('download_invoice')
+                    ->label(__('Download PDF Invoice'))
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('gray')
+                    ->url(
+                        fn (Payment $record): string => route('payment.invoice.download', $record),
                         shouldOpenInNewTab: true,
                     ),
                 EditAction::make(),

@@ -1,7 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Pages;
 
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -12,6 +15,11 @@ class SystemLogs extends Page
     protected string $view = 'filament.pages.system-logs';
 
     public string $logContent = '';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+    }
 
     public static function getNavigationIcon(): string
     {

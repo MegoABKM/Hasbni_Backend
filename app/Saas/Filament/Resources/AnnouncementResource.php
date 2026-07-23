@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources;
 
 use App\Models\Announcement;
+use App\Models\User;
 use App\Saas\Filament\Resources\AnnouncementResource\Pages;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -20,6 +23,12 @@ use Filament\Tables\Table;
 class AnnouncementResource extends Resource
 {
     protected static ?string $model = Announcement::class;
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user() instanceof User
+            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+    }
 
     public static function getNavigationIcon(): string
     {

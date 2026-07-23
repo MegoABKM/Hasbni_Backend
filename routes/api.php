@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplePayController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CashController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\MyFatoorahController;
 use App\Http\Controllers\OwnerWithdrawalController;
 use App\Http\Controllers\PartnershipController;
+use App\Http\Controllers\PaymentInvoiceController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -55,12 +57,13 @@ Route::get('/app-status', function () {
     ]);
 });
 Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe']);
+Route::post('/webhooks/apple', [ApplePayController::class, 'webhook']);
 Route::get('/webhooks/myfatoorah/callback', [MyFatoorahController::class, 'callback']);
 
 Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 // مسارات محمية لجميع المستخدمين (مدير وكاشير)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'plan'])->group(function () {
 
     // 🚀 المسارات التي تم إخراجها لتعمل مع الكاشير والمدير بشكل سليم
     Route::get('/sync/delta', [SyncController::class, 'delta']);
@@ -71,6 +74,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/pay/myfatoorah', [MyFatoorahController::class, 'checkout']);
     Route::get('/my-subscription', [SaaSController::class, 'mySubscription']);
+    Route::get('/payments/{payment}/invoice.pdf', [PaymentInvoiceController::class, 'download'])
+        ->middleware('throttle:10,1');
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -119,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cash/drawers', [CashController::class, 'getDrawers']);
 
     Route::post('/verify-google-play', [GooglePlayController::class, 'verifyPurchase']);
+    Route::post('/verify-apple-purchase', [ApplePayController::class, 'validateReceipt']);
 
     // 🚀 مسارات حصرية للمدير فقط 🚀
     Route::middleware(['manager'])->group(function () {

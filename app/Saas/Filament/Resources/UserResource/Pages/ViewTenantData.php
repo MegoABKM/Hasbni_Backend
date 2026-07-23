@@ -1,9 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources\UserResource\Pages;
 
 use App\Saas\Filament\Resources\UserResource;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager;
+use App\Saas\Filament\Resources\UserResource\RelationManagers\FeatureFlagsRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\ProfileRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
@@ -25,6 +28,7 @@ class ViewTenantData extends ViewRecord
     {
         return [
             UserResource::impersonationAction(),
+            UserResource::purgeTenantAction(),
         ];
     }
 
@@ -43,6 +47,7 @@ class ViewTenantData extends ViewRecord
             PaymentsRelationManager::class,
             TokensRelationManager::class,
             AuditLogsRelationManager::class,
+            FeatureFlagsRelationManager::class,
         ];
     }
 }

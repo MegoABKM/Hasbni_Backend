@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PaymentInvoiceController;
 use App\Saas\Models\Payment;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Response;
@@ -62,3 +63,7 @@ Route::get('/payments/{payment}/receipt', function (Payment $payment) {
 })
     ->middleware(['auth', 'manager'])
     ->name('payment.receipt');
+
+Route::get('/payments/{payment}/invoice.pdf', [PaymentInvoiceController::class, 'download'])
+    ->middleware(['auth', 'manager'])
+    ->name('payment.invoice.download');

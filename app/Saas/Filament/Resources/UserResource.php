@@ -1,10 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Saas\Filament\Resources;
 
+use App\Jobs\PurgeTenantDataJob;
 use App\Models\User;
 use App\Saas\Filament\Resources\UserResource\Pages;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\AuditLogsRelationManager;
+use App\Saas\Filament\Resources\UserResource\RelationManagers\FeatureFlagsRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\PaymentsRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\ProfileRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
@@ -25,6 +29,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UserResource extends Resource
 {
@@ -201,6 +206,7 @@ class UserResource extends Resource
                             ->send();
                     }),
                 static::impersonationAction(),
+                static::purgeTenantAction(),
             ]);
     }
 
@@ -214,8 +220,17 @@ class UserResource extends Resource
             ->modalHeading(__('Generate Impersonation Token'))
             ->modalDescription(__('This creates a temporary API token that acts as this tenant.'))
             ->modalSubmitActionLabel(__('Generate Token'))
-            ->visible(fn (User $record): bool => $record->role === 'tenant')
-            ->action(function (User $record): void {
+            ->visible(fn (User $record): bool => auth()->user()?->role === 'super_admin' && $record->role === 'tenant')
+            ->form([
+                TextInput::make('password')
+                    ->label(__('Confirm Your Password'))
+                    ->password()
+                    ->revealable()
+                    ->required(),
+            ])
+            ->action(function (User $record, array $data): void {
+                static::verifySuperAdminPassword((string) $data['password']);
+
                 $record->tokens()
                     ->where('name', 'admin_impersonation')
                     ->delete();
@@ -231,6 +246,45 @@ class UserResource extends Resource
             });
     }
 
+    public static function purgeTenantAction(): Action
+    {
+        return Action::make('purge_tenant')
+            ->label(__('Permanently Purge Tenant'))
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->visible(fn (User $record): bool => auth()->user()?->role === 'super_admin' && $record->role === 'tenant')
+            ->requiresConfirmation()
+            ->modalHeading(__('Permanently Purge Tenant'))
+            ->modalDescription(__('All tenant data will be permanently erased. This action cannot be undone.'))
+            ->form([
+                TextInput::make('password')
+                    ->label(__('Confirm Your Password'))
+                    ->password()
+                    ->revealable()
+                    ->required(),
+            ])
+            ->action(function (User $record, array $data): void {
+                static::verifySuperAdminPassword((string) $data['password']);
+                PurgeTenantDataJob::dispatch((int) $record->getKey());
+
+                Notification::make()
+                    ->title(__('Tenant purge queued'))
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private static function verifySuperAdminPassword(string $password): void
+    {
+        $admin = auth()->user();
+
+        if (! $admin instanceof User || $admin->role !== 'super_admin' || ! Hash::check($password, $admin->password)) {
+            throw ValidationException::withMessages([
+                'password' => __('The password is incorrect.'),
+            ]);
+        }
+    }
+
     public static function getRelations(): array
     {
         return [
@@ -239,6 +293,7 @@ class UserResource extends Resource
             PaymentsRelationManager::class,
             TokensRelationManager::class,
             AuditLogsRelationManager::class,
+            FeatureFlagsRelationManager::class,
         ];
     }
 
