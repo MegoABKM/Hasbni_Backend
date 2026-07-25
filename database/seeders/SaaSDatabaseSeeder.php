@@ -28,6 +28,7 @@ class SaaSDatabaseSeeder extends Seeder
                 'name' => 'Super Admin',
                 'password' => Hash::make($adminPassword),
                 'role' => 'super_admin',
+                'account_type' => User::ACCOUNT_TYPE_STAFF,
             ]
         );
 

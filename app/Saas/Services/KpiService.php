@@ -2,6 +2,7 @@
 
 namespace App\Saas\Services;
 
+use App\Models\User;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
@@ -348,7 +349,7 @@ final class KpiService
             3600,
             function (): array {
                 $query = DB::table('users')
-                    ->where('role', $this->tenantRole())
+                    ->where('account_type', $this->tenantAccountType())
                     ->whereNotNull('country')
                     ->where('country', '!=', '')
                     ->distinct()
@@ -428,7 +429,7 @@ final class KpiService
             : null;
 
         $firstSignupDate = DB::table('users')
-            ->where('role', $this->tenantRole())
+            ->where('account_type', $this->tenantAccountType())
             ->min('created_at');
 
         $firstDate = collect([$firstMetricDate, $firstSignupDate])
@@ -673,7 +674,7 @@ final class KpiService
     {
         $query = DB::table('payments')
             ->join('users', 'users.id', '=', 'payments.user_id')
-            ->where('users.role', $this->tenantRole())
+            ->where('users.account_type', $this->tenantAccountType())
             ->where('payments.status', 'successful')
             ->whereBetween('payments.paid_at', [$start, $end]);
 
@@ -693,7 +694,7 @@ final class KpiService
         $rows = DB::table('subscriptions')
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->join('users', 'users.id', '=', 'subscriptions.user_id')
-            ->where('users.role', $this->tenantRole())
+            ->where('users.account_type', $this->tenantAccountType())
             ->whereIn('subscriptions.status', $this->subscriptionStatuses())
             ->where(function (Builder $query) use ($asOf): void {
                 $query->whereNull('subscriptions.starts_at')
@@ -735,7 +736,7 @@ final class KpiService
         $query = DB::table('subscriptions')
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->join('users', 'users.id', '=', 'subscriptions.user_id')
-            ->where('users.role', $this->tenantRole())
+            ->where('users.account_type', $this->tenantAccountType())
             ->where('subscriptions.status', 'active')
             ->where(function (Builder $query) use ($asOf): void {
                 $query->whereNull('subscriptions.starts_at')
@@ -772,7 +773,7 @@ final class KpiService
     private function userMrrAggregates(Carbon $asOf): array
     {
         $users = DB::table('users')
-            ->where('role', $this->tenantRole())
+            ->where('account_type', $this->tenantAccountType())
             ->where('created_at', '<=', $asOf)
             ->select(['id', 'country'])
             ->get();
@@ -792,7 +793,7 @@ final class KpiService
         $rows = DB::table('subscriptions')
             ->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
             ->join('users', 'users.id', '=', 'subscriptions.user_id')
-            ->where('users.role', $this->tenantRole())
+            ->where('users.account_type', $this->tenantAccountType())
             ->where('users.created_at', '<=', $asOf)
             ->whereIn('subscriptions.status', $this->subscriptionStatuses())
             ->where(function (Builder $query) use ($asOf): void {
@@ -873,7 +874,7 @@ final class KpiService
         $countryExpression = $this->countryExpression('users');
 
         $rows = DB::table('users')
-            ->where('role', $this->tenantRole())
+            ->where('account_type', $this->tenantAccountType())
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw("{$countryExpression} as country, COUNT(id) as aggregate")
             ->groupBy('users.country')
@@ -898,7 +899,7 @@ final class KpiService
 
         $rows = DB::table('subscriptions')
             ->join('users', 'users.id', '=', 'subscriptions.user_id')
-            ->where('users.role', $this->tenantRole())
+            ->where('users.account_type', $this->tenantAccountType())
             ->whereIn('subscriptions.status', ['expired', 'canceled'])
             ->whereBetween('subscriptions.ends_at', [$start, $end])
             ->selectRaw("{$countryExpression} as country, COUNT(subscriptions.id) as aggregate")
@@ -986,9 +987,9 @@ final class KpiService
         return $this->dailyMetricsTableExists ??= Schema::hasTable('saas_daily_metrics');
     }
 
-    private function tenantRole(): string
+    private function tenantAccountType(): string
     {
-        return (string) config('saas.tenant.owner_role', 'tenant');
+        return User::ACCOUNT_TYPE_TENANT;
     }
 
     /**

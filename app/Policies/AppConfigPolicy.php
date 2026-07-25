@@ -11,26 +11,26 @@ final class AppConfigPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === 'super_admin';
+        return $user->can('ViewAny:AppConfigResource');
     }
 
     public function view(User $user, AppConfig $config): bool
     {
-        return $this->viewAny($user);
+        return $user->can('View:AppConfigResource');
     }
 
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Create:AppConfigResource');
     }
 
     public function update(User $user, AppConfig $config): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Update:AppConfigResource');
     }
 
     public function delete(User $user, AppConfig $config): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Delete:AppConfigResource');
     }
 }

@@ -27,7 +27,7 @@ class SupportTicketResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->hasAnyRole(['super_admin', 'support_admin']);
+        return $user instanceof User && $user->can('ViewAny:SupportTicketResource');
     }
 
     public static function getNavigationIcon(): string

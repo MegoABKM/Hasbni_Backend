@@ -7,6 +7,7 @@ namespace App\Saas\Filament\Resources;
 use App\Models\FailedJob;
 use App\Models\User;
 use App\Saas\Filament\Resources\FailedJobResource\Pages;
+use App\Support\RbacPermission;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -22,7 +23,8 @@ final class FailedJobResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can('ViewAny:FailedJobResource');
     }
 
     public static function getNavigationIcon(): string
@@ -62,6 +64,7 @@ final class FailedJobResource extends Resource
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
+                    ->visible(fn (): bool => auth()->user()?->can(RbacPermission::MANAGE_FAILED_JOBS) ?? false)
                     ->action(function (FailedJob $record): void {
                         Artisan::call('queue:retry', ['id' => [$record->uuid]]);
                         Notification::make()->title(__('Job queued for retry'))->success()->send();
@@ -74,6 +77,7 @@ final class FailedJobResource extends Resource
                     ->icon('heroicon-o-trash')
                     ->color('danger')
                     ->requiresConfirmation()
+                    ->visible(fn (): bool => auth()->user()?->can(RbacPermission::MANAGE_FAILED_JOBS) ?? false)
                     ->action(function (): void {
                         Artisan::call('queue:flush');
                         Notification::make()->title(__('Failed jobs cleared'))->success()->send();

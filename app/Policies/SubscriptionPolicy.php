@@ -11,26 +11,26 @@ final class SubscriptionPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'finance_admin']);
+        return $user->can('ViewAny:SubscriptionResource');
     }
 
     public function view(User $user, Subscription $subscription): bool
     {
-        return $this->viewAny($user);
+        return $user->can('View:SubscriptionResource');
     }
 
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Create:SubscriptionResource');
     }
 
     public function update(User $user, Subscription $subscription): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Update:SubscriptionResource');
     }
 
     public function delete(User $user, Subscription $subscription): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Delete:SubscriptionResource');
     }
 }

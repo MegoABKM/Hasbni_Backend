@@ -63,7 +63,7 @@ class SubscriptionResource extends Resource
                 ->relationship(
                     name: 'user',
                     titleAttribute: 'name',
-                    modifyQueryUsing: fn (Builder $query): Builder => $query->where('role', 'tenant'),
+                    modifyQueryUsing: fn (Builder $query): Builder => $query->tenants(),
                 )
                 ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->name} ({$record->email})")
                 ->searchable(['name', 'email'])

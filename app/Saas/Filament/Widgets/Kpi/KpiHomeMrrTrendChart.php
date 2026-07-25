@@ -22,7 +22,7 @@ class KpiHomeMrrTrendChart extends ChartWidget
     public static function canView(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+            && auth()->user()->can('View:KpiHomeMrrTrendChart');
     }
 
     public function getHeading(): ?string

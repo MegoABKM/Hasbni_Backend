@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\RbacPermission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,7 +13,7 @@ class EnsureManagerAccess
     {
         $user = $request->user();
 
-        if ($user?->role === 'super_admin') {
+        if ($user?->can(RbacPermission::ACCESS_ADMIN_PANEL)) {
             return $next($request);
         }
 

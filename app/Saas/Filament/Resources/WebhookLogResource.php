@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Saas\Filament\Resources\WebhookLogResource\Pages;
 use App\Saas\Models\WebhookLog;
 use App\Saas\Services\AppleJwsVerifier;
+use App\Support\RbacPermission;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
@@ -30,7 +31,8 @@ final class WebhookLogResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can('ViewAny:WebhookLogResource');
     }
 
     public static function getNavigationIcon(): string
@@ -99,6 +101,7 @@ final class WebhookLogResource extends Resource
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
+                    ->visible(fn (): bool => auth()->user()?->can(RbacPermission::REPLAY_WEBHOOKS) ?? false)
                     ->action(fn (WebhookLog $record) => self::replay($record)),
                 ViewAction::make(),
             ]);

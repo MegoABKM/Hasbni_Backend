@@ -15,10 +15,13 @@ use App\Saas\Models\Plan;
 use App\Saas\Models\Subscription;
 use App\Saas\Models\TenantFeatureFlag;
 use App\Saas\Models\WebhookLog;
+use App\Support\RbacPermission;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 final class EnterpriseSaasFoundationTest extends TestCase
@@ -110,10 +113,17 @@ final class EnterpriseSaasFoundationTest extends TestCase
 
     public function test_admin_role_policies_enforce_finance_and_support_boundaries(): void
     {
-        $superAdmin = User::factory()->make(['role' => 'super_admin']);
-        $financeAdmin = User::factory()->make(['role' => 'finance_admin']);
-        $supportAdmin = User::factory()->make(['role' => 'support_admin']);
-        $tenant = User::factory()->make(['role' => 'tenant']);
+        $superAdmin = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_STAFF]);
+        $financeAdmin = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_STAFF]);
+        $supportAdmin = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_STAFF]);
+        $tenant = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_TENANT]);
+
+        $financeAdmin->givePermissionTo(Permission::findOrCreate('ViewAny:PaymentResource', 'web'));
+        $supportAdmin->givePermissionTo([
+            Permission::findOrCreate('ViewAny:SupportTicketResource', 'web'),
+            Permission::findOrCreate('View:UserResource', 'web'),
+        ]);
+        $superAdmin->givePermissionTo(Permission::findOrCreate(RbacPermission::IMPERSONATE_TENANT, 'web'));
 
         $this->assertTrue((new PaymentPolicy)->viewAny($financeAdmin));
         $this->assertFalse((new PaymentPolicy)->viewAny($supportAdmin));
@@ -122,6 +132,23 @@ final class EnterpriseSaasFoundationTest extends TestCase
         $this->assertTrue((new UserPolicy)->view($supportAdmin, $tenant));
         $this->assertFalse((new UserPolicy)->update($supportAdmin, $tenant));
         $this->assertTrue((new UserPolicy)->impersonate($superAdmin, $tenant));
+    }
+
+    public function test_only_staff_with_panel_permission_can_access_filament(): void
+    {
+        $permission = Permission::findOrCreate(RbacPermission::ACCESS_ADMIN_PANEL, 'web');
+        $staff = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_STAFF]);
+        $tenant = User::factory()->create(['account_type' => User::ACCOUNT_TYPE_TENANT]);
+
+        $staff->givePermissionTo($permission);
+        $tenant->givePermissionTo($permission);
+
+        $panel = Filament::getPanel('admin');
+
+        $this->assertTrue($staff->canAccessPanel($panel));
+        $this->assertFalse($tenant->canAccessPanel($panel));
+        $this->assertCount(1, User::query()->staff()->get());
+        $this->assertCount(1, User::query()->tenants()->get());
     }
 
     public function test_dunning_command_initializes_grace_period_and_queues_day_one_warning(): void

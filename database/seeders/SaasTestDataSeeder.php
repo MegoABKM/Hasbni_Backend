@@ -59,6 +59,7 @@ class SaasTestDataSeeder extends Seeder
                     'email' => self::DEMO_EMAIL_PREFIX.$index.self::DEMO_EMAIL_DOMAIN,
                     'password' => $password,
                     'role' => 'tenant',
+                    'account_type' => User::ACCOUNT_TYPE_TENANT,
                     'is_banned' => false,
                     'phone' => '+1'.str_pad((string) $index, 10, '0', STR_PAD_LEFT),
                     'country' => $country,

@@ -29,7 +29,7 @@ class PushNotifications extends Page implements HasForms
     public static function canAccess(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+            && auth()->user()->can('View:PushNotifications');
     }
 
     public static function getNavigationIcon(): string

@@ -22,7 +22,7 @@ class SaaSCountryAnalyticsWidget extends Widget
     public static function canView(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+            && auth()->user()->can('View:SaaSCountryAnalyticsWidget');
     }
 
     /**
@@ -70,7 +70,7 @@ class SaaSCountryAnalyticsWidget extends Widget
             ->leftJoinSub($subscriptions, 'subscription_metrics', function ($join): void {
                 $join->on('subscription_metrics.user_id', '=', 'users.id');
             })
-            ->where('users.role', config('saas.tenant.owner_role', 'tenant'))
+            ->where('users.account_type', User::ACCOUNT_TYPE_TENANT)
             ->selectRaw("{$countryExpression} as country")
             ->selectRaw('COUNT(users.id) as registered_users')
             ->selectRaw('COALESCE(SUM(subscription_metrics.active_subscriptions), 0) as active_subscriptions')

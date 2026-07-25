@@ -9,6 +9,7 @@ use App\Saas\Filament\Exports\PaymentExporter;
 use App\Saas\Filament\Resources\PaymentResource\Pages;
 use App\Saas\Models\Payment;
 use App\Saas\Services\PaymentRefundService;
+use App\Support\RbacPermission;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -36,7 +37,7 @@ class PaymentResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->hasAnyRole(['super_admin', 'finance_admin']);
+        return $user instanceof User && $user->can('ViewAny:PaymentResource');
     }
 
     public static function getNavigationIcon(): string
@@ -78,7 +79,7 @@ class PaymentResource extends Resource
                             ->relationship(
                                 name: 'user',
                                 titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query): Builder => $query->where('role', 'tenant'),
+                                modifyQueryUsing: fn (Builder $query): Builder => $query->tenants(),
                             )
                             ->getOptionLabelFromRecordUsing(
                                 fn ($record): string => "{$record->name} ({$record->email})",
@@ -189,7 +190,8 @@ class PaymentResource extends Resource
                     ->label(__('Export Payments'))
                     ->icon('heroicon-o-arrow-down-tray')
                     ->exporter(PaymentExporter::class)
-                    ->columnMappingColumns(2),
+                    ->columnMappingColumns(2)
+                    ->visible(fn (): bool => auth()->user()?->can(RbacPermission::EXPORT_PAYMENTS) ?? false),
             ])
             ->recordActions([
                 Action::make('refund')
@@ -197,7 +199,8 @@ class PaymentResource extends Resource
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
                     ->visible(fn (Payment $record): bool => $record->status === 'successful'
-                        && in_array($record->payment_method, ['stripe', 'myfatoorah'], true))
+                        && in_array($record->payment_method, ['stripe', 'myfatoorah'], true)
+                        && (auth()->user()?->can(RbacPermission::REFUND_PAYMENT) ?? false))
                     ->requiresConfirmation()
                     ->modalDescription(__('The refund will be submitted directly to the payment gateway and cannot be undone.'))
                     ->action(function (Payment $record): void {

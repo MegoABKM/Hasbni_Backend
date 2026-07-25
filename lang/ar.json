@@ -433,5 +433,11 @@
     "Your subscription expires soon": "سينتهي اشتراكك قريبًا",
     "Subscription expiration reminder": "تذكير بانتهاء الاشتراك",
     "Your subscription expires in :days days. Renew it to avoid entering the grace period.": "سينتهي اشتراكك خلال :days أيام. جدده لتجنب الدخول في فترة السماح.",
-    "Subscription ends": "ينتهي الاشتراك"
+    "Subscription ends": "ينتهي الاشتراك",
+    "Roles & Permissions": "الأدوار والصلاحيات",
+    "Staff": "فريق العمل",
+    "Staff Account": "حساب موظف",
+    "Staff Member": "موظف",
+    "Roles": "الأدوار",
+    "Created At": "تاريخ الإنشاء"
 }

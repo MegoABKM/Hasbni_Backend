@@ -17,7 +17,7 @@ final class PaymentInvoiceController extends Controller
 
         abort_unless(
             $user !== null
-            && ($user->hasAnyRole(['super_admin', 'finance_admin']) || $payment->user_id === $user->getKey()),
+            && ($user->can('View:PaymentResource') || $payment->user_id === $user->getKey()),
             Response::HTTP_FORBIDDEN,
         );
 

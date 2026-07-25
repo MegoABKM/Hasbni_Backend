@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Saas\Models\Payment;
 use App\Saas\Models\Subscription;
 use App\Saas\Models\TenantFeatureFlag;
+use App\Support\RbacPermission;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,25 +15,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
-    /**
-     * Roles allowed to authenticate into the Filament administration panel.
-     * Resource-level authorization remains more restrictive where required.
-     *
-     * @var array<int, string>
-     */
-    public const FILAMENT_ADMIN_ROLES = [
-        'super_admin',
-        'support_admin',
-        'finance_admin',
-    ];
+    public const ACCOUNT_TYPE_STAFF = 'staff';
+
+    public const ACCOUNT_TYPE_TENANT = 'tenant';
+
+    protected string $guard_name = 'web';
 
     protected $fillable = [
-        'name', 'email', 'password', 'role', 'is_banned',
+        'name', 'email', 'password', 'account_type', 'role', 'is_banned',
         'phone', 'country', 'business_type', 'fcm_token',
     ];
 
@@ -45,20 +41,29 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return in_array((string) $this->role, self::FILAMENT_ADMIN_ROLES, true);
-    }
-
-    /**
-     * @param  array<int, string>  $roles
-     */
-    public function hasAnyRole(array $roles): bool
-    {
-        return in_array((string) $this->role, $roles, true);
+        return $panel->getId() === 'admin'
+            && $this->account_type === self::ACCOUNT_TYPE_STAFF
+            && $this->can(RbacPermission::ACCESS_ADMIN_PANEL);
     }
 
     public function scopeTenants(Builder $query): Builder
     {
-        return $query->where('role', 'tenant');
+        return $query->where('account_type', self::ACCOUNT_TYPE_TENANT);
+    }
+
+    public function scopeStaff(Builder $query): Builder
+    {
+        return $query->where('account_type', self::ACCOUNT_TYPE_STAFF);
+    }
+
+    public function isTenant(): bool
+    {
+        return $this->account_type === self::ACCOUNT_TYPE_TENANT;
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->account_type === self::ACCOUNT_TYPE_STAFF;
     }
 
     public function subscriptions()

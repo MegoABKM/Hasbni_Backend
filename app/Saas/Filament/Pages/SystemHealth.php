@@ -18,7 +18,8 @@ final class SystemHealth extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can('View:SystemHealth');
     }
 
     public static function getNavigationIcon(): string

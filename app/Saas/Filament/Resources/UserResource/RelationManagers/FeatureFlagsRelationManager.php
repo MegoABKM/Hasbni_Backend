@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Saas\Filament\Resources\UserResource\RelationManagers;
 
+use App\Support\RbacPermission;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -27,7 +28,7 @@ final class FeatureFlagsRelationManager extends RelationManager
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
     {
-        return auth()->user()?->role === 'super_admin';
+        return auth()->user()?->can(RbacPermission::MANAGE_FEATURE_FLAGS) ?? false;
     }
 
     public function form(Schema $schema): Schema

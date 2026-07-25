@@ -423,5 +423,11 @@
     "Your subscription expires soon": "Your subscription expires soon",
     "Subscription expiration reminder": "Subscription expiration reminder",
     "Your subscription expires in :days days. Renew it to avoid entering the grace period.": "Your subscription expires in :days days. Renew it to avoid entering the grace period.",
-    "Subscription ends": "Subscription ends"
+    "Subscription ends": "Subscription ends",
+    "Roles & Permissions": "Roles & Permissions",
+    "Staff": "Staff",
+    "Staff Account": "Staff Account",
+    "Staff Member": "Staff Member",
+    "Roles": "Roles",
+    "Created At": "Created At"
 }

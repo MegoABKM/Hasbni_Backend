@@ -8,6 +8,7 @@ use App\Saas\Filament\Widgets\Kpi\KpiHomeMrrTrendChart;
 use App\Saas\Filament\Widgets\Kpi\KpiHomeOverviewWidget;
 use App\Saas\Filament\Widgets\SaaSCountryAnalyticsWidget;
 use App\Saas\Filament\Widgets\SystemOverviewWidget;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -78,6 +79,14 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+            ])
+            ->plugins([
+                FilamentShieldPlugin::make()
+                    ->navigationGroup(__('System Settings'))
+                    ->navigationLabel(__('Roles & Permissions'))
+                    ->navigationIcon('heroicon-o-shield-check')
+                    ->navigationSort(1)
+                    ->registerNavigation(true),
             ])
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,

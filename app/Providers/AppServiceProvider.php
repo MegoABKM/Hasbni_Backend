@@ -16,6 +16,7 @@ use App\Policies\AppConfigPolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\PaymentPolicy;
 use App\Policies\PlanPolicy;
+use App\Policies\RolePolicy;
 use App\Policies\SubscriptionPolicy;
 use App\Policies\SupportTicketPolicy;
 use App\Policies\UserPolicy;
@@ -30,6 +31,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(SupportTicket::class, SupportTicketPolicy::class);
         Gate::policy(AppConfig::class, AppConfigPolicy::class);
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
+        Gate::policy(Role::class, RolePolicy::class);
 
         // 1. حماية الـ API العام
         RateLimiter::for('api', function (Request $request) {

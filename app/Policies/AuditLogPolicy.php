@@ -11,12 +11,12 @@ final class AuditLogPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === 'super_admin';
+        return $user->can('ViewAny:AuditLogResource');
     }
 
     public function view(User $user, AuditLog $log): bool
     {
-        return $this->viewAny($user);
+        return $user->can('View:AuditLogResource');
     }
 
     public function create(User $user): bool

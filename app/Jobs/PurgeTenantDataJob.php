@@ -30,7 +30,7 @@ final class PurgeTenantDataJob implements ShouldQueue
             return;
         }
 
-        if ($tenant->role !== 'tenant') {
+        if (! $tenant->isTenant()) {
             throw new RuntimeException("Refusing to purge non-tenant user {$this->tenantId}.");
         }
 

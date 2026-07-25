@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Saas\Filament\Pages;
 
 use App\Models\User;
+use App\Support\RbacPermission;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -18,7 +19,8 @@ class SystemLogs extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can(RbacPermission::VIEW_SYSTEM_LOGS);
     }
 
     public static function getNavigationIcon(): string

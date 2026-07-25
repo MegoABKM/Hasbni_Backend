@@ -13,6 +13,7 @@ use App\Saas\Filament\Resources\UserResource\RelationManagers\PaymentsRelationMa
 use App\Saas\Filament\Resources\UserResource\RelationManagers\ProfileRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\SubscriptionsRelationManager;
 use App\Saas\Filament\Resources\UserResource\RelationManagers\TokensRelationManager;
+use App\Support\RbacPermission;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Hidden;
@@ -63,7 +64,7 @@ class UserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->where('role', 'tenant')
+            ->tenants()
             ->with('subscription.plan')
             ->withCount(['subscriptions', 'payments'])
             ->withSum([
@@ -113,6 +114,7 @@ class UserResource extends Resource
                         ->onColor('danger')
                         ->offColor('success'),
                     Hidden::make('role')->default('tenant'),
+                    Hidden::make('account_type')->default(User::ACCOUNT_TYPE_TENANT),
                 ]),
         ]);
     }
@@ -169,7 +171,7 @@ class UserResource extends Resource
                 SelectFilter::make('country')
                     ->label(__('Country'))
                     ->options(fn (): array => User::query()
-                        ->where('role', 'tenant')
+                        ->tenants()
                         ->whereNotNull('country')
                         ->where('country', '!=', '')
                         ->distinct()
@@ -220,7 +222,8 @@ class UserResource extends Resource
             ->modalHeading(__('Generate Impersonation Token'))
             ->modalDescription(__('This creates a temporary API token that acts as this tenant.'))
             ->modalSubmitActionLabel(__('Generate Token'))
-            ->visible(fn (User $record): bool => auth()->user()?->role === 'super_admin' && $record->role === 'tenant')
+            ->visible(fn (User $record): bool => $record->isTenant()
+                && (auth()->user()?->can(RbacPermission::IMPERSONATE_TENANT) ?? false))
             ->form([
                 TextInput::make('password')
                     ->label(__('Confirm Your Password'))
@@ -229,7 +232,10 @@ class UserResource extends Resource
                     ->required(),
             ])
             ->action(function (User $record, array $data): void {
-                static::verifySuperAdminPassword((string) $data['password']);
+                static::verifyAdminPassword(
+                    (string) $data['password'],
+                    RbacPermission::IMPERSONATE_TENANT,
+                );
 
                 $record->tokens()
                     ->where('name', 'admin_impersonation')
@@ -252,7 +258,8 @@ class UserResource extends Resource
             ->label(__('Permanently Purge Tenant'))
             ->icon('heroicon-o-trash')
             ->color('danger')
-            ->visible(fn (User $record): bool => auth()->user()?->role === 'super_admin' && $record->role === 'tenant')
+            ->visible(fn (User $record): bool => $record->isTenant()
+                && (auth()->user()?->can(RbacPermission::PURGE_TENANT) ?? false))
             ->requiresConfirmation()
             ->modalHeading(__('Permanently Purge Tenant'))
             ->modalDescription(__('All tenant data will be permanently erased. This action cannot be undone.'))
@@ -264,7 +271,10 @@ class UserResource extends Resource
                     ->required(),
             ])
             ->action(function (User $record, array $data): void {
-                static::verifySuperAdminPassword((string) $data['password']);
+                static::verifyAdminPassword(
+                    (string) $data['password'],
+                    RbacPermission::PURGE_TENANT,
+                );
                 PurgeTenantDataJob::dispatch((int) $record->getKey());
 
                 Notification::make()
@@ -274,11 +284,13 @@ class UserResource extends Resource
             });
     }
 
-    private static function verifySuperAdminPassword(string $password): void
+    private static function verifyAdminPassword(string $password, string $permission): void
     {
         $admin = auth()->user();
 
-        if (! $admin instanceof User || $admin->role !== 'super_admin' || ! Hash::check($password, $admin->password)) {
+        if (! $admin instanceof User
+            || ! $admin->can($permission)
+            || ! Hash::check($password, $admin->password)) {
             throw ValidationException::withMessages([
                 'password' => __('The password is incorrect.'),
             ]);

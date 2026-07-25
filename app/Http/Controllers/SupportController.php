@@ -50,9 +50,9 @@ class SupportController extends Controller
         ]);
 
         $recipients = User::query()
-            ->whereIn('role', ['super_admin', 'support_admin'])
-            ->select('id')
-            ->get();
+            ->staff()
+            ->get(['id'])
+            ->filter(fn (User $user): bool => $user->can('ViewAny:SupportTicketResource'));
 
         if ($recipients->isNotEmpty()) {
             Notification::make()

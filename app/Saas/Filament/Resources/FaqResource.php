@@ -25,7 +25,7 @@ class FaqResource extends Resource
     public static function canViewAny(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'support_admin']);
+            && auth()->user()->can('ViewAny:FaqResource');
     }
 
     public static function getNavigationIcon(): string

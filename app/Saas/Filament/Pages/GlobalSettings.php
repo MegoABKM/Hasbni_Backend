@@ -47,7 +47,8 @@ class GlobalSettings extends Page implements HasForms
 
     public static function canAccess(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can('View:GlobalSettings');
     }
 
     public function mount(): void

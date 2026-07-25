@@ -64,6 +64,7 @@ class AuthController extends Controller
             'business_type' => $data['business_type'],
             'password' => Hash::make($data['password']),
             'role' => 'tenant',
+            'account_type' => User::ACCOUNT_TYPE_TENANT,
         ]);
 
         $user->profile()->create([

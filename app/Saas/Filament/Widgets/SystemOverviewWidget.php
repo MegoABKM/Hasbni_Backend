@@ -17,7 +17,8 @@ class SystemOverviewWidget extends BaseWidget
 
     public static function canView(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can('View:SystemOverviewWidget');
     }
 
     protected function getStats(): array

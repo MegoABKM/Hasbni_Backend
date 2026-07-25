@@ -24,7 +24,7 @@ class PromoCodeResource extends Resource
     public static function canViewAny(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+            && auth()->user()->can('ViewAny:PromoCodeResource');
     }
 
     public static function getNavigationIcon(): string

@@ -22,7 +22,7 @@ class SaasAnalytics extends BaseKpiPage
     public static function canAccess(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+            && auth()->user()->can('View:SaasAnalytics');
     }
 
     protected function getHeaderActions(): array

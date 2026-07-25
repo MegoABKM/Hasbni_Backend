@@ -20,7 +20,7 @@ class KpiHomeOverviewWidget extends Widget
     public static function canView(): bool
     {
         return auth()->user() instanceof User
-            && auth()->user()->hasAnyRole(['super_admin', 'finance_admin']);
+            && auth()->user()->can('View:KpiHomeOverviewWidget');
     }
 
     /**

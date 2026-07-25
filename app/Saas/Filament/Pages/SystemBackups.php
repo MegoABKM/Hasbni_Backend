@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Saas\Filament\Pages;
 
 use App\Models\User;
+use App\Support\RbacPermission;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -25,7 +26,8 @@ class SystemBackups extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user() instanceof User && auth()->user()->role === 'super_admin';
+        return auth()->user() instanceof User
+            && auth()->user()->can(RbacPermission::MANAGE_BACKUPS);
     }
 
     public static function getNavigationIcon(): string
@@ -169,7 +171,9 @@ class SystemBackups extends Page
         $this->validate(['password' => ['required', 'string']]);
         $user = auth()->user();
 
-        if (! $user instanceof User || $user->role !== 'super_admin' || ! Hash::check($this->password, $user->password)) {
+        if (! $user instanceof User
+            || ! $user->can(RbacPermission::MANAGE_BACKUPS)
+            || ! Hash::check($this->password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => __('The password is incorrect.'),
             ]);

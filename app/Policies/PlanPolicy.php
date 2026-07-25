@@ -11,26 +11,26 @@ final class PlanPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['super_admin', 'finance_admin']);
+        return $user->can('ViewAny:PlanResource');
     }
 
     public function view(User $user, Plan $plan): bool
     {
-        return $this->viewAny($user);
+        return $user->can('View:PlanResource');
     }
 
     public function create(User $user): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Create:PlanResource');
     }
 
     public function update(User $user, Plan $plan): bool
     {
-        return $this->viewAny($user);
+        return $user->can('Update:PlanResource');
     }
 
     public function delete(User $user, Plan $plan): bool
     {
-        return $user->role === 'super_admin';
+        return $user->can('Delete:PlanResource');
     }
 }
